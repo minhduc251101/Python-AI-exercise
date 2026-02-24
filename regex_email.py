@@ -45,7 +45,7 @@ def check_password(pwd):
     if len(pwd) < 8:
         return False
     checks = [
-        r'[a-z]',           # chữ thường
+        r'[a-z]',          # chữ thường
         r'[A-Z]',           # chữ hoa
         r'[0-9]',           # chữ số
         r'[!@#$%^&*]',      # ký tự đặc biệt
