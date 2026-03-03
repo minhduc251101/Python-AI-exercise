@@ -7,6 +7,11 @@ def check_ipv4(ip) -> bool:
     pattern = r'^((25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)$'
     return re.match(pattern, ip)
 
+
+def check_ipv6(ip) -> bool:
+    pattern_ = r'^(?:[0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4}$|^::1$|^::$'
+    return re.fullmatch(pattern_, ip)
+
 class IP_TYPE(Enum):
     V4 = "v4"
     V6 = "v6"
@@ -32,14 +37,15 @@ def check_ip(ip: str, ip_type: IP_TYPE = IP_TYPE) -> bool:
     return False
 
 class CHECKIP: # --> 
-    def __init__(self, ip_type: IP_TYPE): # --> 
+    def __init__(self, ip_type: IP_TYPE): # --> ham khoi tao va de dung sau cac bien 
         self.ip_type = ip_type
         self.pattern_v4 = r'^((25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)$'
+        self.pattern_v6 = r'^(?:[0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4}$|^::1$|^::$'
 
     def check_ip_type_basic(self): 
         return self.ip_type
     
-    @property
+    @property # cho ham chay nhanh hon va khong bi luu them bo nho dem
     def check_ip_type(self): 
         return self.ip_type
     # pattern = r'^((25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)$'
@@ -71,7 +77,7 @@ def check_alphanumeric(s):
 # print(check_alphanumeric("Hello123"))  # True
 # print(check_alphanumeric(""))          # False
 # print(check_alphanumeric("Hello!"))    # False
-# print(check_alphanumeric("abc_123"))   # False
+# print(check_alphanumeric("abc_123"))   # False    
 
 
 # 9.4) Kiểm tra độ mạnh mật khẩu
@@ -80,16 +86,22 @@ def check_alphanumeric(s):
 #   - Ít nhất 1 chữ hoa
 #   - Ít nhất 1 chữ số
 #   - Ít nhất 1 ký tự đặc biệt [!@#$%^&*]
-def check_password(pwd):
+def check_password(pwd:str) -> bool:
+    checks = [r"[a-z]", r"[A-Z]", r"[0-9]", r"[!@#$%^&*]"]
     if len(pwd) < 8:
+        print("Non-Valid Password")
         return False
-    checks = [
-        r'[a-z]',          # chữ thường
-        r'[A-Z]',           # chữ hoa
-        r'[0-9]',           # chữ số
-        r'[!@#$%^&*]',      # ký tự đặc biệt
-    ]
-    return all(re.search(p, pwd) for p in checks)
+        
+    if re.search(r"[a-z]", pwd) is None:
+        print("Missing lowercase")
+    if re.search(r"[A-Z]", pwd) is None:
+        print("Missing Uppercase")
+    if re.search(r"[0-9]", pwd) is None:
+        print("Missing Number")
+    if re.search(r"[!@#$%^&*]", pwd) is None:
+        print("Missing Special Character")
+    
+    return all(re.search(p, pwd) is not None for p in checks)
 
 # print("\n=== 9.4 Password Strength ===")
 # print(check_password("Abc@1234"))     # True
@@ -104,5 +116,9 @@ if __name__ == "__main__":
     # print(check_ipv4(input_ip)) ## true
     # print('*'*40)
     # print(check_ip(input_ip, ip_type="v4")) ## true
-    checkip = CHECKIP(ip_type=IP_TYPE.V4.value)
-    print(checkip.check_ip_type)
+    #update check pwd in coding style 
+    pwd = "abcxy111112222"
+    check_pwd = check_password(pwd) 
+    print(check_pwd)
+    # checkip = CHECKIP(ip_type=IP_TYPE.V6.value)
+    # print(checkip.check_ip_type)
