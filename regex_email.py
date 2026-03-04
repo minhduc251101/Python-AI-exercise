@@ -86,21 +86,35 @@ def check_alphanumeric(s):
 #   - Ít nhất 1 chữ hoa
 #   - Ít nhất 1 chữ số
 #   - Ít nhất 1 ký tự đặc biệt [!@#$%^&*]
+<<<<<<< HEAD
 def check_password(pwd:str) -> bool:
     checks = [r"[a-z]", r"[A-Z]", r"[0-9]", r"[!@#$%^&*]"]
     if len(pwd) < 8:
         print("Non-Valid Password")
         return False
         
+=======
+def check_password(pwd):
+    checks = [r"[a-z]", r"[A-Z]", r"[0-9]", r"[!@#$%^&*]"]
+    if len(pwd) < 8:
+        print("Password Fail")
+        return False
+>>>>>>> ac7be53 (update check_pwd code and fix some coding style)
     if re.search(r"[a-z]", pwd) is None:
         print("Missing lowercase")
     if re.search(r"[A-Z]", pwd) is None:
         print("Missing Uppercase")
     if re.search(r"[0-9]", pwd) is None:
+<<<<<<< HEAD
         print("Missing Number")
     if re.search(r"[!@#$%^&*]", pwd) is None:
         print("Missing Special Character")
     
+=======
+        print("Missing Digit")
+    if re.search(r"[!@#$%^&*]", pwd) is None:
+        print("Missing Special Character")    
+>>>>>>> ac7be53 (update check_pwd code and fix some coding style)
     return all(re.search(p, pwd) is not None for p in checks)
 
 # print("\n=== 9.4 Password Strength ===")
@@ -116,9 +130,17 @@ if __name__ == "__main__":
     # print(check_ipv4(input_ip)) ## true
     # print('*'*40)
     # print(check_ip(input_ip, ip_type="v4")) ## true
+<<<<<<< HEAD
     #update check pwd in coding style 
     pwd = "abcxy111112222"
     check_pwd = check_password(pwd) 
     print(check_pwd)
     # checkip = CHECKIP(ip_type=IP_TYPE.V6.value)
     # print(checkip.check_ip_type)
+=======
+    pwd = "12344^"
+    check_pwd= check_password(pwd)
+    # checkip = CHECKIP(ip_type=IP_TYPE.V4.value)
+    # print(checkip.check_ip_type)
+    print(check_pwd)
+>>>>>>> ac7be53 (update check_pwd code and fix some coding style)
