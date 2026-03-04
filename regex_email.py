@@ -71,7 +71,7 @@ def extract_emails(text):
 # 9.3) Kiểm tra chuỗi khác rỗng, chỉ chứa a-z, A-Z, 0-9
 def check_alphanumeric(s):
     pattern = r'^[a-zA-Z0-9]+$'
-    return bool(re.match(pattern, s))
+    return bool(re.fullmatch(pattern, s))
 
 # print("\n=== 9.3 Alphanumeric ===")
 # print(check_alphanumeric("Hello123"))  # True
@@ -120,8 +120,13 @@ if __name__ == "__main__":
 
 
     pwd = "12344^"
+    alphanumeric_letter = "hello " # False vi \n la dau xuong dong
     check_pwd= check_password(pwd)
+    check_alphanumeric_letter = check_alphanumeric(alphanumeric_letter)
     # checkip = CHECKIP(ip_type=IP_TYPE.V4.value)
     # print(checkip.check_ip_type)
     print(check_pwd)
+
+    print("\n")
+    print("check alphanumeric:",check_alphanumeric_letter)
 
