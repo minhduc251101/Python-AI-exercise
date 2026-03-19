@@ -1,0 +1,113 @@
+2026-03-11T21:31:29.821Z INFO Is remote: false
+2026-03-11T21:31:29.826Z INFO Starting Local. Installation path: c:\Users\61493\Downloads
+2026-03-11T21:31:29.831Z INFO [MainProvider] Creating new MainProvider instance...
+2026-03-11T21:31:29.837Z INFO [TabsManager] Code view listener set up at initialization
+2026-03-11T21:31:29.841Z INFO Installation path exists: c:\Users\61493\Downloads
+2026-03-11T21:31:29.845Z INFO Initializing database with URL: file:c:\Users\61493\Downloads\pythagora-core\data\database\pythagora.db
+2026-03-11T21:31:29.853Z INFO Database file exists, skipping prisma generate/push for faster startup
+2026-03-11T21:31:31.365Z INFO Database initialized successfully
+2026-03-11T21:31:31.372Z INFO [Migration] Checking for database migration...
+2026-03-11T21:31:31.489Z INFO [Migration] Old database detected, running migration...
+2026-03-11T21:31:31.495Z INFO [Migration] Creating temporary database with new schema...
+2026-03-11T21:31:31.552Z ERROR [Migration] Migration failed:
+Error: Error: Command failed: node "c:\Users\61493\.vscode\extensions\pythagoratechnologies.pythagora-vs-code-2.6.19\node_modules\prisma\build\index.js" db push --schema="c:\Users\61493\.vscode\extensions\pythagoratechnologies.pythagora-vs-code-2.6.19\prisma\schema.prisma" --skip-generate
+'node' is not recognized as an internal or external command,
+operable program or batch file.
+
+2026-03-11T21:31:31.558Z ERROR [Migration] Error during migration check/execution:
+Error: Error: Command failed: node "c:\Users\61493\.vscode\extensions\pythagoratechnologies.pythagora-vs-code-2.6.19\node_modules\prisma\build\index.js" db push --schema="c:\Users\61493\.vscode\extensions\pythagoratechnologies.pythagora-vs-code-2.6.19\prisma\schema.prisma" --skip-generate
+'node' is not recognized as an internal or external command,
+operable program or batch file.
+
+2026-03-11T21:31:53.450Z INFO Closing entire Pythagora extension...
+2026-03-11T21:31:53.458Z ERROR Error closing extension
+Error: Canceled
+Stack: Canceled: Canceled
+	at new iI (file:///c:/Users/61493/AppData/Local/Programs/Microsoft%20VS%20Code/61b3d0ab13/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:407:147604)
+	at r._remoteCall (file:///c:/Users/61493/AppData/Local/Programs/Microsoft%20VS%20Code/61b3d0ab13/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:407:153656)
+	at i.<computed>.s.charCodeAt.i.<computed> (file:///c:/Users/61493/AppData/Local/Programs/Microsoft%20VS%20Code/61b3d0ab13/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:407:150451)
+	at Jm._doExecuteCommand (file:///c:/Users/61493/AppData/Local/Programs/Microsoft%20VS%20Code/61b3d0ab13/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:494:48120)
+	at Jm.executeCommand (file:///c:/Users/61493/AppData/Local/Programs/Microsoft%20VS%20Code/61b3d0ab13/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:494:47567)
+	at Object.executeCommand (file:///c:/Users/61493/AppData/Local/Programs/Microsoft%20VS%20Code/61b3d0ab13/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:588:129159)
+	at closeEntirePythagoraExtension (c:\Users\61493\.vscode\extensions\pythagoratechnologies.pythagora-vs-code-2.6.19\out\extension.js:542:31)
+	at Object.deactivate (c:\Users\61493\.vscode\extensions\pythagoratechnologies.pythagora-vs-code-2.6.19\out\extension.js:409:15)
+	at lk._deactivate (file:///c:/Users/61493/AppData/Local/Programs/Microsoft%20VS%20Code/61b3d0ab13/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:498:14479)
+	at file:///c:/Users/61493/AppData/Local/Programs/Microsoft%20VS%20Code/61b3d0ab13/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:498:12006
+	at Array.map (<anonymous>)
+	at lk._deactivateAll (file:///c:/Users/61493/AppData/Local/Programs/Microsoft%20VS%20Code/61b3d0ab13/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:498:11994)
+	at lk.terminate (file:///c:/Users/61493/AppData/Local/Programs/Microsoft%20VS%20Code/61b3d0ab13/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:498:12345)
+	at r.terminate (file:///c:/Users/61493/AppData/Local/Programs/Microsoft%20VS%20Code/61b3d0ab13/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:500:1072)
+	at Os (file:///c:/Users/61493/AppData/Local/Programs/Microsoft%20VS%20Code/61b3d0ab13/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:780:11691)
+	at MessagePortMain.<anonymous> (file:///c:/Users/61493/AppData/Local/Programs/Microsoft%20VS%20Code/61b3d0ab13/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:780:8122)
+	at MessagePortMain.emit (node:events:519:28)
+	at MessagePortMain._internalPort.emit (node:electron/js2c/utility_init:2:2959)
+Extra context: {
+  "message": "Canceled"
+}
+2026-03-11T21:32:14.424Z INFO Is remote: false
+2026-03-11T21:32:14.432Z INFO Starting Local. Installation path: c:\Users\61493\Downloads
+2026-03-11T21:32:14.439Z INFO [MainProvider] Creating new MainProvider instance...
+2026-03-11T21:32:14.446Z INFO [TabsManager] Code view listener set up at initialization
+2026-03-11T21:32:14.452Z INFO Installation path exists: c:\Users\61493\Downloads
+2026-03-11T21:32:14.458Z INFO Initializing database with URL: file:c:\Users\61493\Downloads\pythagora-core\data\database\pythagora.db
+2026-03-11T21:32:14.466Z INFO Database file exists, skipping prisma generate/push for faster startup
+2026-03-11T21:32:14.473Z INFO Database initialized successfully
+2026-03-11T21:32:14.479Z INFO [Migration] Checking for database migration...
+2026-03-11T21:32:14.569Z INFO [Migration] Old database detected, running migration...
+2026-03-11T21:32:14.577Z INFO [Migration] Creating temporary database with new schema...
+2026-03-11T21:32:14.633Z ERROR [Migration] Migration failed:
+Error: Error: Command failed: node "c:\Users\61493\.vscode\extensions\pythagoratechnologies.pythagora-vs-code-2.6.19\node_modules\prisma\build\index.js" db push --schema="c:\Users\61493\.vscode\extensions\pythagoratechnologies.pythagora-vs-code-2.6.19\prisma\schema.prisma" --skip-generate
+'node' is not recognized as an internal or external command,
+operable program or batch file.
+
+2026-03-11T21:32:14.642Z ERROR [Migration] Error during migration check/execution:
+Error: Error: Command failed: node "c:\Users\61493\.vscode\extensions\pythagoratechnologies.pythagora-vs-code-2.6.19\node_modules\prisma\build\index.js" db push --schema="c:\Users\61493\.vscode\extensions\pythagoratechnologies.pythagora-vs-code-2.6.19\prisma\schema.prisma" --skip-generate
+'node' is not recognized as an internal or external command,
+operable program or batch file.
+
+2026-03-11T21:32:14.665Z INFO Starting right sidebar creation...
+2026-03-11T21:32:14.672Z INFO Initializing MainProvider...
+2026-03-11T21:32:14.681Z INFO Updating user profile...
+2026-03-11T21:32:14.690Z INFO No access token found when trying to fetch user profile
+2026-03-11T21:32:14.699Z INFO Creating right panel...
+2026-03-11T21:32:14.705Z INFO Creating right panel...
+2026-03-11T21:32:14.712Z INFO Closing all existing tabs...
+2026-03-11T21:32:14.731Z INFO Right panel webview created
+2026-03-11T21:32:14.738Z INFO Right panel HTML set successfully
+2026-03-11T21:32:14.746Z INFO Right panel setup completed
+2026-03-11T21:32:14.752Z INFO Setting up right panel dependencies...
+2026-03-11T21:32:14.767Z INFO Right panel dependencies setup complete, waiting for ready signal...
+2026-03-11T21:32:15.885Z INFO [Message Router] Routing rightPanelReady through unified router
+2026-03-11T21:32:15.957Z INFO [Message Router] Routing rightBarRendered through unified router
+2026-03-11T21:32:15.968Z INFO Right panel setup completed successfully
+2026-03-11T21:32:15.977Z INFO Right panel created via MainProvider
+2026-03-11T21:32:21.192Z INFO Right panel disposed, triggering cleanup...
+2026-03-11T21:32:21.200Z INFO Right panel disposed, cleaning up...
+2026-03-11T21:32:21.209Z INFO [Message Router] Routing coreExited through unified router
+2026-03-11T21:32:21.218Z INFO Closing entire Pythagora extension...
+2026-03-11T21:32:21.234Z INFO Pythagora extension closed
+2026-03-11T21:32:45.300Z INFO Closing entire Pythagora extension...
+2026-03-11T21:32:45.314Z ERROR Error closing extension
+Error: Canceled
+Stack: Canceled: Canceled
+	at new iI (file:///c:/Users/61493/AppData/Local/Programs/Microsoft%20VS%20Code/61b3d0ab13/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:407:147604)
+	at r._remoteCall (file:///c:/Users/61493/AppData/Local/Programs/Microsoft%20VS%20Code/61b3d0ab13/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:407:153656)
+	at i.<computed>.s.charCodeAt.i.<computed> (file:///c:/Users/61493/AppData/Local/Programs/Microsoft%20VS%20Code/61b3d0ab13/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:407:150451)
+	at Jm._doExecuteCommand (file:///c:/Users/61493/AppData/Local/Programs/Microsoft%20VS%20Code/61b3d0ab13/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:494:48120)
+	at Jm.executeCommand (file:///c:/Users/61493/AppData/Local/Programs/Microsoft%20VS%20Code/61b3d0ab13/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:494:47567)
+	at Object.executeCommand (file:///c:/Users/61493/AppData/Local/Programs/Microsoft%20VS%20Code/61b3d0ab13/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:588:129159)
+	at closeEntirePythagoraExtension (c:\Users\61493\.vscode\extensions\pythagoratechnologies.pythagora-vs-code-2.6.19\out\extension.js:542:31)
+	at Object.deactivate (c:\Users\61493\.vscode\extensions\pythagoratechnologies.pythagora-vs-code-2.6.19\out\extension.js:409:15)
+	at lk._deactivate (file:///c:/Users/61493/AppData/Local/Programs/Microsoft%20VS%20Code/61b3d0ab13/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:498:14479)
+	at file:///c:/Users/61493/AppData/Local/Programs/Microsoft%20VS%20Code/61b3d0ab13/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:498:12006
+	at Array.map (<anonymous>)
+	at lk._deactivateAll (file:///c:/Users/61493/AppData/Local/Programs/Microsoft%20VS%20Code/61b3d0ab13/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:498:11994)
+	at lk.terminate (file:///c:/Users/61493/AppData/Local/Programs/Microsoft%20VS%20Code/61b3d0ab13/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:498:12345)
+	at r.terminate (file:///c:/Users/61493/AppData/Local/Programs/Microsoft%20VS%20Code/61b3d0ab13/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:500:1072)
+	at Os (file:///c:/Users/61493/AppData/Local/Programs/Microsoft%20VS%20Code/61b3d0ab13/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:780:11691)
+	at MessagePortMain.<anonymous> (file:///c:/Users/61493/AppData/Local/Programs/Microsoft%20VS%20Code/61b3d0ab13/resources/app/out/vs/workbench/api/node/extensionHostProcess.js:780:8122)
+	at MessagePortMain.emit (node:events:519:28)
+	at MessagePortMain._internalPort.emit (node:electron/js2c/utility_init:2:2959)
+Extra context: {
+  "message": "Canceled"
+}
