@@ -91,6 +91,11 @@ corres = o3d.pipelines.registration.correspondences_from_features(
 corres_np = np.asarray(corres)
 print("done correspondences:", corres_np.shape, flush=True)
 
+for i in range(0,corres_np.shape[0],1000):
+    src_idx = corres_np[i,0] # first column
+    tgt_idx = corres_np[i,1] # second column
+    print(f"FPFH of matched correspondence pair {i}:source point[{src_idx}]<-> target point[{tgt_idx}]")
+
 
 distance_threshold = voxel_size * 1.5
 # Load GT trajectory
@@ -160,7 +165,7 @@ print("\n===== ICP result =====")
 print("fitness:", result_icp.fitness)
 print("inlier_rmse:", result_icp.inlier_rmse)
 print("transformation:\n", result_icp.transformation)
-# ── Compare with your estimated result ──────────────────────────────
+# ── Compare with your estimated result ──────────────────────
 # Paste your result_icp.transformation here:
 T_estimated = result_icp.transformation  # from your ICP code
 
