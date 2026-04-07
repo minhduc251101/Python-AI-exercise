@@ -61,7 +61,7 @@ def draw_result(source, target, T, title):
     )
 
 
-voxel_size = 0.00001
+voxel_size = 0.1
 
 source = o3d.io.read_point_cloud("bun000.ply")
 target = o3d.io.read_point_cloud("bun_zipper.ply")
