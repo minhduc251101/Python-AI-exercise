@@ -879,17 +879,35 @@
 
 
 
-import copy
-import numpy as np
-import open3d as o3d
-from scipy.spatial.transform import Rotation
-import matplotlib.pyplot as plt
-import pyvista as pv
-#Read and plot pcd and ply file
+# import copy
+# import numpy as np
+# import open3d as o3d
+# from scipy.spatial.transform import Rotation
+# import matplotlib.pyplot as plt
+# import pyvista as pv
+# #Read and plot pcd and ply file
 
-source_pv = pv.read("bun000.ply")
-target_pv = pv.read("bun_zipper.ply")
-print("source plot\n")
-source_pv.plot(eye_dome_lighting=True)
-print("target plot\n")
-target_pv.plot(eye_dome_lighting=True)
+# source_pv = pv.read("bun000.ply")
+# target_pv = pv.read("bun_zipper.ply")
+# print("source plot\n")
+# source_pv.plot(eye_dome_lighting=True)
+# print("target plot\n")
+# target_pv.plot(eye_dome_lighting=True)
+
+
+import numpy as np
+from scipy.spatial.transform import Rotation
+
+roll, pitch, yaw = 30, 45, 60  # độ
+
+# Extrinsic xyz với [roll, pitch, yaw]
+R_ext = Rotation.from_euler('xyz', [roll, pitch, yaw], degrees=True).as_matrix()
+
+# Intrinsic ZYX với [yaw, pitch, roll]
+R_int = Rotation.from_euler('ZYX', [yaw, pitch, roll], degrees=True).as_matrix()
+print("\nR ext\n", R_ext)
+print("\nR int\n", R_int)
+print("Sai số giữa hai ma trận:", np.max(np.abs(R_ext - R_int)))
+# Kết quả: 0.0 (hoặc cỡ 1e-16 do làm tròn số)
+
+print("Sai số giữa hai ma trận theo matlab:\n", R_int @ np.linalg.inv(R_ext) - np.eye(3))
