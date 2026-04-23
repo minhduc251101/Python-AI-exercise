@@ -879,20 +879,45 @@
 
 
 
-# # # import copy
-# # # import numpy as np
-# # # import open3d as o3d
-# # # from scipy.spatial.transform import Rotation
-# # # import matplotlib.pyplot as plt
-# # # import pyvista as pv
-# # # #Read and plot pcd and ply file
+import copy
+import numpy as np
+import open3d as o3d
+from scipy.spatial.transform import Rotation
+import matplotlib.pyplot as plt
+import pyvista as pv
+#Read and plot pcd and ply file
+voxel_size = 0.001 # Giu nhieu pcd hon 0.1
 
-# # # source_pv = pv.read("bun000.ply")
-# # # target_pv = pv.read("bun_zipper.ply")
-# # # print("source plot\n")
-# # # source_pv.plot(eye_dome_lighting=True)
-# # # print("target plot\n")
-# # # target_pv.plot(eye_dome_lighting=True)
+source_pv = pv.read("bun000.ply")
+target_pv = pv.read("bun_zipper.ply")
+# pcd = o3d.io.read_point_cloud("../../test_data/fragment.ply")
+source_o3d = o3d.geometry.PointCloud()
+source_o3d.points = o3d.utility.Vector3dVector(np.asarray(source_pv.points))
+
+target_o3d = o3d.geometry.PointCloud()
+target_o3d.points = o3d.utility.Vector3dVector(np.asarray(target_pv.points))
+
+source_down = source_o3d.voxel_down_sample(voxel_size)
+target_down = target_o3d.voxel_down_sample(voxel_size)
+
+print("source plot\n")
+source_pv.plot(eye_dome_lighting=True)
+
+print("target plot\n")
+target_pv.plot(eye_dome_lighting=True)
+
+# print("Number of source",source_o3d)
+# print("Number of target", target_o3d)
+# print("Number of source down", source_down)
+# print("Number of target down",target_down)
+print("Number of source points      :", np.asarray(source_o3d.points))
+print("Number of target points      :", np.asarray(target_o3d.points).shape[0])
+print("Number of source down points :", np.asarray(source_down.points).shape[0])
+print("Number of target down points :", np.asarray(target_down.points).shape[0])
+o3d.visualization.draw_geometries([source_o3d], window_name="Source")
+o3d.visualization.draw_geometries([target_o3d], window_name="Target")
+o3d.visualization.draw_geometries([source_down], window_name="Source Down")
+o3d.visualization.draw_geometries([target_down], window_name="Target Down")
 
 
 # # import numpy as np
@@ -1654,11 +1679,11 @@
 
 # if __name__ == "__main__":
 #     main()
-import open3d as o3d
-import numpy as np
-voxel_sizes = o3d.utility.DoubleVector([0.1, 0.05, 0.025])
-v =  np.asarray(voxel_sizes)
-#    None nghĩa là chèn thêm một trục mới kích thước 1.
-column = v[1:3, None]
-print ("voxel_sizes transpose \n", column)
-print ("voxel_sizes shape", column.shape)
+# import open3d as o3d
+# import numpy as np
+# voxel_sizes = o3d.utility.DoubleVector([0.1, 0.05, 0.025])
+# v =  np.asarray(voxel_sizes)
+# #    None nghĩa là chèn thêm một trục mới kích thước 1.
+# column = v[1:, None]
+# print ("voxel_sizes transpose \n", column)
+# print ("voxel_sizes shape", column.shape)

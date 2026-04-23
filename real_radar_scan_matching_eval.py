@@ -1241,9 +1241,9 @@ def overlap_label(overlap, threshold=0.30):
 #     print(f"  Saved: {prefix}_fpfh_full_point_{point_idx}.png")
 
 #     plt.show()
-# ============================================================
-# FPFH UTILITIES
-# ============================================================
+# ===================================================================
+# FPFH UTILITIES + Save FPFH CORRESPONDENCE + PLOT CORRESPONDENCE
+# ===================================================================
 
 def preprocess_for_fpfh(pcd, voxel_size=0.1, normal_radius=None, feature_radius=None,
                         normal_max_nn=30, feature_max_nn=100):
@@ -1493,6 +1493,383 @@ def run_fpfh_ransac_icp(source, target, voxel_size=0.1, max_dist=2.0,
     )
 
     return result_icp, result_ransac
+
+def save_fpfh_correspondences(
+    source, target,
+    voxel_size=0.1,
+    normal_radius=None,
+    feature_radius=None,
+    normal_max_nn=30,
+    feature_max_nn=100,
+    transform_for_check=None,
+    max_residual=1.0,
+    mutual_filter=True,
+    out_prefix="fpfh_corr"
+):
+    src_feat_cloud, src_fpfh = preprocess_for_fpfh(
+        source,
+        voxel_size=voxel_size,
+        normal_radius=normal_radius,
+        feature_radius=feature_radius,
+        normal_max_nn=normal_max_nn,
+        feature_max_nn=feature_max_nn
+    )
+    tgt_feat_cloud, tgt_fpfh = preprocess_for_fpfh(
+        target,
+        voxel_size=voxel_size,
+        normal_radius=normal_radius,
+        feature_radius=feature_radius,
+        normal_max_nn=normal_max_nn,
+        feature_max_nn=feature_max_nn
+    )
+
+    if src_fpfh is None or tgt_fpfh is None:
+        print("WARNING: No FPFH descriptors available.")
+        return None
+
+    src_pts = np.asarray(src_feat_cloud.points)
+    tgt_pts = np.asarray(tgt_feat_cloud.points)
+
+    src_desc = np.asarray(src_fpfh.data).T   # (Ns, 33)
+    tgt_desc = np.asarray(tgt_fpfh.data).T   # (Nt, 33)
+
+    if len(src_desc) == 0 or len(tgt_desc) == 0:
+        print("WARNING: Empty FPFH descriptors.")
+        return None
+
+    dmat = np.linalg.norm(src_desc[:, None, :] - tgt_desc[None, :, :], axis=2)
+    src_to_tgt = np.argmin(dmat, axis=1)
+    src_to_tgt_dist = dmat[np.arange(len(src_desc)), src_to_tgt]
+
+    if mutual_filter:
+        tgt_to_src = np.argmin(dmat, axis=0)
+    else:
+        tgt_to_src = None
+
+    rows = []
+    matched_src_points = []
+    matched_tgt_points = []
+    matched_src_points_good = []
+    matched_tgt_points_good = []
+
+    for i in range(len(src_desc)):
+        j = src_to_tgt[i]
+
+        if mutual_filter and tgt_to_src[j] != i:
+            continue
+
+        p_src = src_pts[i]
+        p_tgt = tgt_pts[j]
+
+        if transform_for_check is not None:
+            p_src_h = np.r_[p_src, 1.0]
+            p_src_tf = (transform_for_check @ p_src_h)[:3]
+            residual = np.linalg.norm(p_src_tf - p_tgt)
+            is_good = residual <= max_residual
+        else:
+            p_src_tf = p_src.copy()
+            residual = np.nan
+            is_good = False
+
+        rows.append([
+            i, j,
+            p_src[0], p_src[1], p_src[2],
+            p_tgt[0], p_tgt[1], p_tgt[2],
+            src_to_tgt_dist[i],
+            residual,
+            int(is_good)
+        ])
+
+        matched_src_points.append(p_src)
+        matched_tgt_points.append(p_tgt)
+
+        if is_good:
+            matched_src_points_good.append(p_src)
+            matched_tgt_points_good.append(p_tgt)
+
+    rows = np.array(rows, dtype=float) if len(rows) > 0 else np.empty((0, 11))
+
+    header = (
+        "src_idx,tgt_idx,"
+        "src_x,src_y,src_z,"
+        "tgt_x,tgt_y,tgt_z,"
+        "fpfh_l2_distance,residual_after_transform,is_geometrically_consistent"
+    )
+    np.savetxt(f"{out_prefix}_table.csv", rows, delimiter=",", header=header, comments="")
+
+    src_all = o3d.geometry.PointCloud()
+    tgt_all = o3d.geometry.PointCloud()
+    src_all.points = o3d.utility.Vector3dVector(np.array(matched_src_points) if len(matched_src_points) else np.empty((0, 3)))
+    tgt_all.points = o3d.utility.Vector3dVector(np.array(matched_tgt_points) if len(matched_tgt_points) else np.empty((0, 3)))
+
+    src_good = o3d.geometry.PointCloud()
+    tgt_good = o3d.geometry.PointCloud()
+    src_good.points = o3d.utility.Vector3dVector(np.array(matched_src_points_good) if len(matched_src_points_good) else np.empty((0, 3)))
+    tgt_good.points = o3d.utility.Vector3dVector(np.array(matched_tgt_points_good) if len(matched_tgt_points_good) else np.empty((0, 3)))
+
+    o3d.io.write_point_cloud(f"{out_prefix}_source_matches.pcd", src_all)
+    o3d.io.write_point_cloud(f"{out_prefix}_target_matches.pcd", tgt_all)
+    o3d.io.write_point_cloud(f"{out_prefix}_source_matches_good.pcd", src_good)
+    o3d.io.write_point_cloud(f"{out_prefix}_target_matches_good.pcd", tgt_good)
+
+    print(f"Saved {out_prefix}_table.csv")
+    print(f"Saved {out_prefix}_source_matches.pcd")
+    print(f"Saved {out_prefix}_target_matches.pcd")
+    print(f"Saved {out_prefix}_source_matches_good.pcd")
+    print(f"Saved {out_prefix}_target_matches_good.pcd")
+    print(f"Total kept correspondences: {len(matched_src_points)}")
+    print(f"Geometrically consistent correspondences: {len(matched_src_points_good)}")
+
+    return {
+    "rows": rows,
+    "source_feat_cloud": src_feat_cloud,
+    "target_feat_cloud": tgt_feat_cloud,
+    # "corr_pairs": rows
+    "corr_pairs": rows[:, :2].astype(int) if len(rows) > 0 else np.empty((0, 2), dtype=int)
+    }
+
+def plot_fpfh_correspondences_2d(
+    source_feat_cloud,
+    target_feat_cloud,
+    correspondences,
+    transform_for_check=None,
+    max_draw=300,
+    residual_threshold=1.0,
+    out_prefix="fpfh_corr",
+    save=True,
+    show=True
+):
+    src_pts = np.asarray(source_feat_cloud.points)
+    tgt_pts = np.asarray(target_feat_cloud.points)
+
+    if correspondences is None or len(correspondences) == 0:
+        print("WARNING: No correspondences to plot.")
+        return
+
+    if max_draw is not None and len(correspondences) > max_draw:
+        idx = np.linspace(0, len(correspondences) - 1, max_draw).astype(int)
+        corr = correspondences[idx]
+    else:
+        corr = correspondences
+
+    src_sel = src_pts[corr[:, 0].astype(int)]
+    tgt_sel = tgt_pts[corr[:, 1].astype(int)]
+
+    if transform_for_check is not None:
+        src_sel_h = np.hstack([src_sel, np.ones((len(src_sel), 1))])
+        src_sel_tf = (transform_for_check @ src_sel_h.T).T[:, :3]
+    else:
+        src_sel_tf = src_sel.copy()
+
+    residuals = np.linalg.norm(src_sel_tf - tgt_sel, axis=1)
+
+    fig, ax = plt.subplots(figsize=(10, 8))
+    ax.scatter(tgt_pts[:, 0], tgt_pts[:, 1], s=1, c='tab:blue', label='Target scan')
+    ax.scatter(src_sel_tf[:, 0], src_sel_tf[:, 1], s=6, c='tab:orange', label='Matched source points')
+
+    for i in range(len(src_sel_tf)):
+        color = 'limegreen' if residuals[i] <= residual_threshold else 'red'
+        ax.plot(
+            [src_sel_tf[i, 0], tgt_sel[i, 0]],
+            [src_sel_tf[i, 1], tgt_sel[i, 1]],
+            color=color,
+            alpha=0.6,
+            linewidth=0.8
+        )
+
+    ax.set_title("FPFH correspondences in 2D")
+    ax.set_xlabel("X (m)")
+    ax.set_ylabel("Y (m)")
+    ax.set_aspect("equal")
+    ax.grid(True, alpha=0.3)
+    ax.legend(loc="upper left", markerscale=4)
+
+    if save:
+        fig.savefig(f"{out_prefix}_corr2d.png", dpi=200, bbox_inches="tight")
+        print(f"Saved {out_prefix}_corr2d.png")
+
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
+
+    fig2, ax2 = plt.subplots(figsize=(8, 5))
+    ax2.hist(residuals, bins=40, color='slateblue', edgecolor='black', alpha=0.85)
+    ax2.axvline(residual_threshold, color='red', linestyle='--', linewidth=1.5,
+                label=f"threshold = {residual_threshold:.3f} m")
+    ax2.set_title("FPFH correspondence residuals")
+    ax2.set_xlabel("Residual after transform (m)")
+    ax2.set_ylabel("Count")
+    ax2.grid(True, alpha=0.3)
+    ax2.legend()
+
+    if save:
+        fig2.savefig(f"{out_prefix}_residual_hist.png", dpi=200, bbox_inches="tight")
+        print(f"Saved {out_prefix}_residual_hist.png")
+
+    if show:
+        plt.show()
+    else:
+        plt.close(fig2)
+    # corr_pairs = rows[:, :2].astype(int) if len(rows) > 0 else np.empty((0, 2), dtype=int)
+    corr_pairs = correspondences[:, :2].astype(int) if len(correspondences) > 0 else np.empty((0, 2), dtype=int)
+
+    return {
+    "rows": correspondences,
+    "source_feat_cloud": source_feat_cloud,
+    "target_feat_cloud": target_feat_cloud,
+    "corr_pairs": corr_pairs
+    }
+
+def plot_fpfh_good_matches_2d(
+    source_feat_cloud,
+    target_feat_cloud,
+    correspondences,
+    out_prefix="fpfh_corr",
+    save=True,
+    show=True,
+    transform_for_check=None
+):
+    src_vis = copy.deepcopy(source_feat_cloud)
+    if transform_for_check is not None:
+        src_vis.transform(transform_for_check)
+
+    src_pts = np.asarray(src_vis.points)
+    tgt_pts = np.asarray(target_feat_cloud.points)
+
+    if correspondences is None or len(correspondences) == 0:
+        print("WARNING: No correspondences to plot.")
+        return
+
+    corr = np.asarray(correspondences)
+    good_mask = corr[:, 10] > 0.5
+    good_corr = corr[good_mask]
+
+    if len(good_corr) == 0:
+        print("WARNING: No geometrically consistent correspondences.")
+        return
+
+    corr_pairs = good_corr[:, :2].astype(int)
+
+    fig, ax = plt.subplots(figsize=(10, 8))
+
+    ax.scatter(tgt_pts[:, 0], tgt_pts[:, 1], s=8, c='tab:blue',
+               label='Target scan points', alpha=0.8)
+    ax.scatter(src_pts[:, 0], src_pts[:, 1], s=8, c='tab:orange',
+               label='Source scan points', alpha=0.8)
+
+    for i, j in corr_pairs:
+        if i < len(src_pts) and j < len(tgt_pts):
+            ax.plot(
+                [src_pts[i, 0], tgt_pts[j, 0]],
+                [src_pts[i, 1], tgt_pts[j, 1]],
+                color='green',
+                linewidth=1.5,
+                alpha=0.8
+            )
+
+    ax.set_title(f"Geometrically consistent FPFH correspondences in 2D ({len(good_corr)} matches)")
+    ax.set_xlabel("X (m)")
+    ax.set_ylabel("Y (m)")
+    ax.set_aspect('equal')
+    ax.grid(True, alpha=0.3)
+    ax.legend(loc='upper left', markerscale=2)
+
+    if save:
+        out = f"{out_prefix}_good_corr2d.png"
+        fig.savefig(out, dpi=150, bbox_inches='tight')
+        print(f"Saved {out}")
+
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
+def plot_fpfh_correspondences_2d_colored_by_residual(
+    source_feat_cloud,
+    target_feat_cloud,
+    correspondences,
+    residual_threshold=1.0,
+    out_prefix="fpfh_corr",
+    save=True,
+    show=True,
+    max_draw=None,
+    transform_for_check=None
+):
+    src_vis = copy.deepcopy(source_feat_cloud)
+    if transform_for_check is not None:
+        src_vis.transform(transform_for_check)
+
+    src_pts = np.asarray(src_vis.points)
+    tgt_pts = np.asarray(target_feat_cloud.points)
+
+    if correspondences is None or len(correspondences) == 0:
+        print("WARNING: No correspondences to plot.")
+        return
+
+    corr = np.asarray(correspondences)
+
+    if max_draw is not None and len(corr) > max_draw:
+        idx = np.linspace(0, len(corr) - 1, max_draw).astype(int)
+        corr = corr[idx]
+
+    corr_pairs = corr[:, :2].astype(int)
+    residuals = corr[:, 9]
+
+    fig, ax = plt.subplots(figsize=(10, 8))
+
+    ax.scatter(
+        tgt_pts[:, 0], tgt_pts[:, 1],
+        s=8, c='tab:blue', label='Target scan points', alpha=0.8
+    )
+    ax.scatter(
+        src_pts[:, 0], src_pts[:, 1],
+        s=8, c='tab:orange', label='Source scan points', alpha=0.8
+    )
+
+    cmap = plt.cm.RdYlGn_r
+    finite_res = residuals[np.isfinite(residuals)]
+    if len(finite_res) > 0:
+        vmax = max(residual_threshold * 2.0, np.max(finite_res))
+    else:
+        vmax = residual_threshold
+
+    for (i, j), r in zip(corr_pairs, residuals):
+        if i < len(src_pts) and j < len(tgt_pts):
+            if np.isnan(r):
+                color = 'gray'
+            else:
+                rn = np.clip(r / vmax, 0.0, 1.0)
+                color = cmap(rn)
+
+            ax.plot(
+                [src_pts[i, 0], tgt_pts[j, 0]],
+                [src_pts[i, 1], tgt_pts[j, 1]],
+                color=color,
+                linewidth=1.2,
+                alpha=0.75
+            )
+
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=0.0, vmax=vmax))
+    sm.set_array([])
+    cbar = plt.colorbar(sm, ax=ax)
+    cbar.set_label("Residual after transform (m)")
+
+    ax.set_title("FPFH correspondences in 2D colored by residual")
+    ax.set_xlabel("X (m)")
+    ax.set_ylabel("Y (m)")
+    ax.set_aspect('equal')
+    ax.grid(True, alpha=0.3)
+    ax.legend(loc='upper left', markerscale=2)
+
+    if save:
+        out = f"{out_prefix}_corr2d_colored_residual.png"
+        fig.savefig(out, dpi=150, bbox_inches='tight')
+        print(f"Saved {out}")
+
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
 # ============================================================
 # 8. ICP + SCAN MATCHING
 # ============================================================
@@ -1731,7 +2108,25 @@ def main():
                         help="Point index for FPFH plotting in scan 1")
     parser.add_argument("--fpfh_point_idx2", type=int, default=100,
                         help="Point index for FPFH plotting in scan 2")
+    parser.add_argument("--savefpfhcorr", action="store_true",
+                        help="Save raw and verified FPFH correspondences")
+    parser.add_argument("--plotfpfhcorr", action="store_true",
+                        help="Plot 2D FPFH correspondences and residual histogram")
+    parser.add_argument("--corrmaxdraw", type=int, default=None,
+                        help="Maximum number of correspondences to draw")
+    parser.add_argument("--corrresidual", type=float, default=1.0,
+                        help="Residual threshold for geometric consistency")
+    parser.add_argument("--corrprefix", default="fpfh_corr",
+                        help="Prefix for saved FPFH correspondence files")
+    
+    parser.add_argument("--plotfpfhgood", action="store_true",
+                    help="Plot only geometrically consistent FPFH correspondences in 2D")
 
+    parser.add_argument("--plotfpfhcolor", action="store_true",
+                        help="Plot FPFH correspondences in 2D colored by residual")
+
+    parser.add_argument("--corrmaxdrawcolor", type=int, default=None,
+                        help="Maximum number of residual-colored correspondences to draw")
 
     # Output
     parser.add_argument("--no_vis", action="store_true",
@@ -1845,8 +2240,8 @@ def main():
                 gt_ts2 = gt_rows[matched_gt_idx2]["timestamp"]
 
                 print("  Using timestamp-based GT matching")
-                print(f"  Frame1 -> GT row {matched_gt_idx1}, GT timestamp {gt_ts1:.9f}, |dt| = {abs(frame_ts1 - gt_ts1):.9f}s")
-                print(f"  Frame2 -> GT row {matched_gt_idx2}, GT timestamp {gt_ts2:.9f}, |dt| = {abs(frame_ts2 - gt_ts2):.9f}s")
+                print(f"  Frame1 -> GT row {matched_gt_idx1}, GT timestamp {gt_ts1:.12f}, |dt| = {abs(frame_ts1 - gt_ts1):.9f}s")
+                print(f"  Frame2 -> GT row {matched_gt_idx2}, GT timestamp {gt_ts2:.12f}, |dt| = {abs(frame_ts2 - gt_ts2):.9f}s")
 
             except Exception as e:
                 print(f"  [WARNING] Timestamp matching failed: {e}")
@@ -2093,11 +2488,70 @@ def main():
             print(f"    RANSAC fitness:     {result_ransac.fitness:.4f}")
             print(f"    RANSAC inlier RMSE: {result_ransac.inlier_rmse:.4f}")
             print_transform(result_ransac.transformation, "    RANSAC initial pose:")
+            corr_data = None
+            if args.savefpfhcorr or args.plotfpfhcorr or args.plotfpfhgood or args.plotfpfhcolor:
+                corr_data = save_fpfh_correspondences(
+                    src, tgt,
+                    voxel_size=args.voxel_size,
+                    # transform_for_check=result.transformation,
+                    # if compared with ground truth instead of estimated transform
+                    transform_for_check = T_gt_source_to_target,
+                    # max_residual=args.icp_max_dist,
+                    max_residual=args.corrresidual,
+                    mutual_filter=True,
+                    # out_prefix=f"fpfh_scan2_to_scan1_idx{args.idx2}_to_{args.idx1}"
+                    out_prefix = args.corrprefix
+                )
+            if corr_data is not None:
+                if args.plotfpfhcorr:
+                    plot_fpfh_correspondences_2d(
+                        corr_data["source_feat_cloud"],
+                        corr_data["target_feat_cloud"],
+                        corr_data["corr_pairs"],
+                        # transform_for_check=result.transformation,
+                        # if compared with ground truth instead of estimated transform
+                        transform_for_check = T_gt_source_to_target,
+                        max_draw=args.corrmaxdraw,
+                        residual_threshold=args.corrresidual,
+                        out_prefix=args.corrprefix,
+                        save=args.save_plots,
+                        show=(not args.no_vis)
+                    )
+
+                if args.plotfpfhgood:
+                    plot_fpfh_good_matches_2d(
+                        corr_data["source_feat_cloud"],
+                        corr_data["target_feat_cloud"],
+                        corr_data["rows"],
+                        out_prefix=args.corrprefix,
+                        save=args.save_plots,
+                        show=(not args.no_vis),
+                        transform_for_check = T_gt_source_to_target
+                    )
+
+                if args.plotfpfhcolor:
+                    plot_fpfh_correspondences_2d_colored_by_residual(
+                        corr_data["source_feat_cloud"],
+                        corr_data["target_feat_cloud"],
+                        corr_data["rows"],
+                        residual_threshold=args.corrresidual,
+                        out_prefix=args.corrprefix,
+                        save=args.save_plots,
+                        show=(not args.no_vis),
+                        max_draw=args.corrmaxdrawcolor,
+                        transform_for_check = T_gt_source_to_target
+                    )
         else:
             result = func(src, tgt, init_T=T_init, max_dist=args.icp_max_dist)
             result_ransac = None
 
+    
+    
+
         T_est = result.transformation
+    
+
+
 
         # Re-evaluate consistently in Open3D
         eval_reg = o3d.pipelines.registration.evaluate_registration(
