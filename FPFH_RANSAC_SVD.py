@@ -1825,8 +1825,8 @@ def main():
     gt_ts1 = gt_rows[gt_idx1]["timestamp"]
     gt_ts2 = gt_rows[gt_idx2]["timestamp"]
 
-    print(f"  Frame1 -> GT row {gt_idx1}, GT timestamp {gt_ts1:.9f}, |dt| = {abs(frame_ts1 - gt_ts1):.9f}s")
-    print(f"  Frame2 -> GT row {gt_idx2}, GT timestamp {gt_ts2:.9f}, |dt| = {abs(frame_ts2 - gt_ts2):.9f}s")
+    print(f"  Frame1 -> GT row {gt_idx1}, GT timestamp {gt_ts1:.12f}, |dt| = {abs(frame_ts1 - gt_ts1):.9f}s")
+    print(f"  Frame2 -> GT row {gt_idx2}, GT timestamp {gt_ts2:.12f}, |dt| = {abs(frame_ts2 - gt_ts2):.9f}s")
 
     print_transform(T1_world, "Target pose in world:")
     print_transform(T2_world, "Source pose in world:")
@@ -1892,6 +1892,20 @@ def main():
     # print(f"  Final Arun inlier ratio:            {result['inlier_ratio']:.6f}")
     # print(f"  Final Arun RMSE:                    {result['rmse']:.6f}")
     # print_transform(T_est, "Estimated final transform (source -> target):")
+    # print("\n[4] Estimated final transform")
+    # print(f"  Num correspondences (Open3D result): {len(result['corr_pairs'])}")
+    # print(f"  Open3D RANSAC fitness:              {result['ransac_fitness']:.6f}")
+    # print(f"  Open3D RANSAC inlier RMSE:          {result['ransac_rmse']:.6f}")
+    # print(f"  Open3D-evaluated inliers:           {result['ransac_num_inliers_eval']}")
+    # print(f"  Final refine mode:                  {result['refine_mode']}")
+    # print(f"  Final num inliers:                  {result['num_inliers']}")
+    # print(f"  Final inlier ratio:                 {result['inlier_ratio']:.6f}")
+    # print(f"  Final RMSE:                         {result['rmse']:.6f}")
+    # print_transform(T_est, "Estimated final transform (source -> target):")
+     # [4] Estimated relative and global transform
+    # --------------------------------------------------------
+  # [4] Estimated relative and global transform
+    # --------------------------------------------------------
     print("\n[4] Estimated final transform")
     print(f"  Num correspondences (Open3D result): {len(result['corr_pairs'])}")
     print(f"  Open3D RANSAC fitness:              {result['ransac_fitness']:.6f}")
@@ -1901,7 +1915,9 @@ def main():
     print(f"  Final num inliers:                  {result['num_inliers']}")
     print(f"  Final inlier ratio:                 {result['inlier_ratio']:.6f}")
     print(f"  Final RMSE:                         {result['rmse']:.6f}")
-    print_transform(T_est, "Estimated final transform (source -> target):")
+    print_transform(T_est, "Estimated RELATIVE transform (source -> target):")
+
+
     # --------------------------------------------------------
     # [5] Compare with GT
     # --------------------------------------------------------
@@ -1933,10 +1949,9 @@ def main():
     np.savetxt(os.path.join(args.result_dir, "estimated_t_final.txt"), t_est.reshape(1, 3), fmt="%.10f")
 
     np.savetxt(os.path.join(args.result_dir, "ransac_transform_open3d.txt"), result["ransac_transformation"], fmt="%.10f")
-
-    np.savetxt(os.path.join(args.result_dir, "gt_transform.txt"), T_gt_source_to_target, fmt="%.10f")
-    np.savetxt(os.path.join(args.result_dir, "gt_R.txt"), T_gt_source_to_target[:3, :3], fmt="%.10f")
-    np.savetxt(os.path.join(args.result_dir, "gt_t.txt"), T_gt_source_to_target[:3, 3].reshape(1, 3), fmt="%.10f")
+    np.savetxt(os.path.join(args.result_dir, "gt_transform_new.txt"), T_gt_source_to_target, fmt="%.10f")
+    np.savetxt(os.path.join(args.result_dir, "gt_R_new.txt"), T_gt_source_to_target[:3, :3], fmt="%.10f")
+    np.savetxt(os.path.join(args.result_dir, "gt_t_new.txt"), T_gt_source_to_target[:3, 3].reshape(1, 3), fmt="%.10f")
 
     if args.save_pose:
         np.savetxt(os.path.join(args.result_dir, args.save_pose_name), T_est, fmt="%.10f")
