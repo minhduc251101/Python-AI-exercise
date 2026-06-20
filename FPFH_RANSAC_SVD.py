@@ -1077,12 +1077,16 @@ def get_frame_entries(scan_root, scan_name="cloud.pcd", meta_name="data"):
 
 
 def load_scan_from_entries(entries, idx):
-    if idx < 0 or idx >= len(entries):
-        print(f"[ERROR] Frame index out of range. Available: 0-{len(entries)-1}")
-        sys.exit(1)
-
-    entry = entries[idx]
-    return load_pcd(entry["scan_path"]), entry
+    for entry in entries:
+        print(f"  Checking frame: {entry['frame_name']}")
+        frame_name = entry["frame_name"].replace("00", "")
+        print(f"  Frame name after replace: {frame_name}")
+        if int(frame_name) == idx:
+            scan_path = entry["scan_path"]
+            print(f"  Loading scan for frame index {idx}: {scan_path}")
+            return load_pcd(scan_path), entry
+        continue
+    raise ValueError(f"Frame index {idx} not found in entries.")
 
 
 # ============================================================
@@ -1790,6 +1794,7 @@ def main():
 
     scan1, entry1 = load_scan_from_entries(entries, args.idx1)  # target
     scan2, entry2 = load_scan_from_entries(entries, args.idx2)  # source
+    SOLID
 
     print(f"  Target frame folder: {entry1['folder']}")
     print(f"  Source frame folder: {entry2['folder']}")

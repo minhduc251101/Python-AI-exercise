@@ -98,6 +98,8 @@ def get_frame_entries(scan_root, scan_name="cloud.pcd", meta_name="data"):
 
 
 def load_scan_from_entries(entries, idx):
+    print(f"  Loading frame index {idx} from {len(entries)} available frames...")
+    
     if idx < 0 or idx >= len(entries):
         print(f"[ERROR] Frame index out of range. Available: 0-{len(entries)-1}")
         sys.exit(1)
