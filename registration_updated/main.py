@@ -1,6 +1,7 @@
 """
 FPFH + Open3D RANSAC + final Arun evaluation against GT odom
 """
+
 """
 python "/media/minhduc/TOSHIBA EXT1/C++ hoc/Python-AI-exercise/FPFH_RANSAC_SVD.py"   
 --scan_root "/media/minhduc/TOSHIBA EXT1/4dradarslam/NTU4Dradlm/cp/cp/loop_true_fullpose"   
@@ -17,7 +18,12 @@ import yaml
 import os
 from loguru import logger
 
-logger.add("/Users/mbp/Desktop/learning/teaching_duc/Python-AI-exercise/registration_updated/logs/registration.log", rotation="1 MB", level="INFO")
+logger.add(
+    "/Users/mbp/Desktop/learning/teaching_duc/Python-AI-exercise/registration_updated/logs/registration.log",
+    rotation="1 MB",
+    level="INFO",
+)
+
 
 def load_config(config_path):
     with open(config_path, "r") as f:

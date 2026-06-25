@@ -8,11 +8,12 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # đổi thành origin FE khi deploy
+    allow_origins=["*"],  # đổi thành origin FE khi deploy
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 @app.post("/remove-bg")
 async def remove_bg(file: UploadFile = File(...)):
@@ -22,5 +23,5 @@ async def remove_bg(file: UploadFile = File(...)):
     return StreamingResponse(
         io.BytesIO(output_bytes),
         media_type="image/png",
-        headers={"Content-Disposition": "inline; filename=output.png"}
+        headers={"Content-Disposition": "inline; filename=output.png"},
     )

@@ -1,4 +1,3 @@
-
 # # # #include <cmath>
 # # # #include <radar_graph_slam/loop_detector.hpp>
 
@@ -878,15 +877,15 @@
 # # # } // namespace radar_graph_slam
 
 
-
 import copy
 import numpy as np
 import open3d as o3d
 from scipy.spatial.transform import Rotation
 import matplotlib.pyplot as plt
 import pyvista as pv
-#Read and plot pcd and ply file
-voxel_size = 0.001 # Giu nhieu pcd hon 0.1
+
+# Read and plot pcd and ply file
+voxel_size = 0.001  # Giu nhieu pcd hon 0.1
 
 source_pv = pv.read("bun000.ply")
 target_pv = pv.read("bun_zipper.ply")
@@ -1295,7 +1294,7 @@ o3d.visualization.draw_geometries([target_down], window_name="Target Down")
 
 #     print(f"  {prefix} FPFH shape: {fpfh_array.shape}")
 #     print(f"  Plotting EXACT FPFH for {prefix}, point index {point_idx}")
-    
+
 #     fig, axes = plt.subplots(1, 3, figsize=(15, 4))
 
 #     # CORRECTED LABELS MATCHING THE FPFH PAPER
@@ -1526,7 +1525,7 @@ o3d.visualization.draw_geometries([target_down], window_name="Target Down")
 #     parser.add_argument("--overlap_radius", type=float, default=1.0)
 #     parser.add_argument("--overlap_threshold", type=float, default=0.30)
 #     parser.add_argument("--method", choices=["point2point", "point2plane", "gicp", "fpfh", "all"], default="all")
-    
+
 #     parser.add_argument("--plot_fpfh", action="store_true")
 #     parser.add_argument("--fpfh_point_idx1", type=int, default=0)
 #     parser.add_argument("--fpfh_point_idx2", type=int, default=100)

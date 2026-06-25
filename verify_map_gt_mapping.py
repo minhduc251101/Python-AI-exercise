@@ -39,6 +39,7 @@ from scipy.spatial.transform import Rotation
 # 1. LOADING
 # ============================================================
 
+
 def load_pcd(filepath):
     if not os.path.exists(filepath):
         print(f"[ERROR] File not found: {filepath}")
@@ -58,7 +59,7 @@ def parse_pose_to_T(row):
         T[:3, :3] = Rotation.from_quat(row[3:7]).as_matrix()
     elif len(row) == 6:
         T[:3, 3] = row[:3]
-        T[:3, :3] = Rotation.from_euler('xyz', row[3:6]).as_matrix()
+        T[:3, :3] = Rotation.from_euler("xyz", row[3:6]).as_matrix()
     else:
         print(f"[ERROR] Cannot parse pose with {len(row)} values. Expected 6 or 7.")
         sys.exit(1)
@@ -71,9 +72,9 @@ def load_ground_truth(filepath):
         print(f"[ERROR] Ground truth file not found: {filepath}")
         sys.exit(1)
 
-    for delim in [',', None]:
+    for delim in [",", None]:
         try:
-            data = np.loadtxt(filepath, delimiter=delim, comments='#')
+            data = np.loadtxt(filepath, delimiter=delim, comments="#")
             if data.ndim == 1:
                 data = data.reshape(1, -1)
             break
@@ -94,17 +95,17 @@ def load_ground_truth(filepath):
         elif ncols == 7:
             if row[0] > 1e9:
                 T[:3, 3] = row[1:4]
-                T[:3, :3] = Rotation.from_euler('xyz', row[4:7]).as_matrix()
+                T[:3, :3] = Rotation.from_euler("xyz", row[4:7]).as_matrix()
             else:
                 T = parse_pose_to_T(row[:7])
         elif ncols == 6:
             T = parse_pose_to_T(row[:6])
         elif ncols == 4:
             T[:3, 3] = [row[0], row[1], row[2]]
-            T[:3, :3] = Rotation.from_euler('z', row[3]).as_matrix()
+            T[:3, :3] = Rotation.from_euler("z", row[3]).as_matrix()
         elif ncols == 3:
             T[:3, 3] = [row[0], row[1], 0.0]
-            T[:3, :3] = Rotation.from_euler('z', row[2]).as_matrix()
+            T[:3, :3] = Rotation.from_euler("z", row[2]).as_matrix()
         else:
             print(f"[ERROR] Unexpected column count: {ncols}")
             sys.exit(1)
@@ -119,13 +120,15 @@ def load_ground_truth(filepath):
 # 2. MAP / POSE CHECKS
 # ============================================================
 
+
 def point_inside_bounds(p, min_b, max_b, margin=0.0):
     return np.all(p >= (min_b - margin)) and np.all(p <= (max_b + margin))
 
 
 def point_inside_bounds_xy(p, min_b, max_b, margin=0.0):
-    return ((min_b[0] - margin) <= p[0] <= (max_b[0] + margin) and
-            (min_b[1] - margin) <= p[1] <= (max_b[1] + margin))
+    return (min_b[0] - margin) <= p[0] <= (max_b[0] + margin) and (
+        min_b[1] - margin
+    ) <= p[1] <= (max_b[1] + margin)
 
 
 def count_points_within_radius(tree, point, radius):
@@ -159,6 +162,7 @@ def summarize_pose(T, idx, min_b, max_b, tree, scan_radius, margin):
 # 3. MAIN
 # ============================================================
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="Verify compatibility between one global map PCD and GT trajectory"
@@ -166,13 +170,26 @@ def main():
     parser.add_argument("--map", required=True, help="Global point cloud map PCD")
     parser.add_argument("--gt_poses", required=True, help="Ground truth poses CSV/TXT")
     parser.add_argument("--idx1", type=int, default=0, help="First GT index to inspect")
-    parser.add_argument("--idx2", type=int, default=100, help="Second GT index to inspect")
-    parser.add_argument("--scan_radius", type=float, default=5.0,
-                        help="Radius used for local scan extraction check")
-    parser.add_argument("--margin", type=float, default=0.0,
-                        help="Extra tolerance when checking if pose is inside map bounds")
-    parser.add_argument("--check_all", action="store_true",
-                        help="Check all GT poses against map bounds and support")
+    parser.add_argument(
+        "--idx2", type=int, default=100, help="Second GT index to inspect"
+    )
+    parser.add_argument(
+        "--scan_radius",
+        type=float,
+        default=5.0,
+        help="Radius used for local scan extraction check",
+    )
+    parser.add_argument(
+        "--margin",
+        type=float,
+        default=0.0,
+        help="Extra tolerance when checking if pose is inside map bounds",
+    )
+    parser.add_argument(
+        "--check_all",
+        action="store_true",
+        help="Check all GT poses against map bounds and support",
+    )
     args = parser.parse_args()
 
     print("=" * 72)
@@ -188,11 +205,11 @@ def main():
         sys.exit(1)
 
     if args.idx1 < 0 or args.idx1 >= len(gt_poses):
-        print(f"[ERROR] idx1 out of range: 0-{len(gt_poses)-1}")
+        print(f"[ERROR] idx1 out of range: 0-{len(gt_poses) - 1}")
         sys.exit(1)
 
     if args.idx2 < 0 or args.idx2 >= len(gt_poses):
-        print(f"[ERROR] idx2 out of range: 0-{len(gt_poses)-1}")
+        print(f"[ERROR] idx2 out of range: 0-{len(gt_poses) - 1}")
         sys.exit(1)
 
     print("\n[2] Computing map bounds...")
@@ -209,13 +226,31 @@ def main():
     tree = o3d.geometry.KDTreeFlann(pcd_map)
 
     print("\n[4] Checking selected GT poses...")
-    summarize_pose(gt_poses[args.idx1], args.idx1, min_b, max_b, tree, args.scan_radius, args.margin)
-    summarize_pose(gt_poses[args.idx2], args.idx2, min_b, max_b, tree, args.scan_radius, args.margin)
+    summarize_pose(
+        gt_poses[args.idx1],
+        args.idx1,
+        min_b,
+        max_b,
+        tree,
+        args.scan_radius,
+        args.margin,
+    )
+    summarize_pose(
+        gt_poses[args.idx2],
+        args.idx2,
+        min_b,
+        max_b,
+        tree,
+        args.scan_radius,
+        args.margin,
+    )
 
     T1 = gt_poses[args.idx1]
     T2 = gt_poses[args.idx2]
     pose_dist = np.linalg.norm(T1[:3, 3] - T2[:3, 3])
-    print(f"\n  Distance between idx {args.idx1} and idx {args.idx2}: {pose_dist:.4f} m")
+    print(
+        f"\n  Distance between idx {args.idx1} and idx {args.idx2}: {pose_dist:.4f} m"
+    )
 
     if args.check_all:
         print("\n[5] Checking all GT poses...")
@@ -236,16 +271,32 @@ def main():
             support_good_count += int(nearby >= 50)
 
         n = len(gt_poses)
-        print(f"  GT poses inside map bounds (XYZ): {inside_xyz_count}/{n} = {inside_xyz_count/n:.2%}")
-        print(f"  GT poses inside map bounds (XY):  {inside_xy_count}/{n} = {inside_xy_count/n:.2%}")
-        print(f"  GT poses with >0 nearby map points within {args.scan_radius:.2f} m: {support_nonzero_count}/{n} = {support_nonzero_count/n:.2%}")
-        print(f"  GT poses with >=50 nearby map points within {args.scan_radius:.2f} m: {support_good_count}/{n} = {support_good_count/n:.2%}")
+        print(
+            f"  GT poses inside map bounds (XYZ): {inside_xyz_count}/{n} = {inside_xyz_count / n:.2%}"
+        )
+        print(
+            f"  GT poses inside map bounds (XY):  {inside_xy_count}/{n} = {inside_xy_count / n:.2%}"
+        )
+        print(
+            f"  GT poses with >0 nearby map points within {args.scan_radius:.2f} m: {support_nonzero_count}/{n} = {support_nonzero_count / n:.2%}"
+        )
+        print(
+            f"  GT poses with >=50 nearby map points within {args.scan_radius:.2f} m: {support_good_count}/{n} = {support_good_count / n:.2%}"
+        )
 
     print("\nInterpretation:")
-    print("  - If a GT pose is outside map bounds, extracting a local scan there is suspicious.")
-    print("  - If a GT pose has 0 nearby map points within scan_radius, extracted scan will be empty.")
-    print("  - If both selected poses have nearby map support, your map-based scan extraction setup is plausible.")
-    print("  - This script does NOT prove frame-to-frame identity; it checks spatial compatibility between map and GT.")
+    print(
+        "  - If a GT pose is outside map bounds, extracting a local scan there is suspicious."
+    )
+    print(
+        "  - If a GT pose has 0 nearby map points within scan_radius, extracted scan will be empty."
+    )
+    print(
+        "  - If both selected poses have nearby map support, your map-based scan extraction setup is plausible."
+    )
+    print(
+        "  - This script does NOT prove frame-to-frame identity; it checks spatial compatibility between map and GT."
+    )
 
     print("\nDone.")
 

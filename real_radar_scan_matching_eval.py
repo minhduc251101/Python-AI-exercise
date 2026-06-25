@@ -784,7 +784,8 @@ Important:
 - Therefore GT alignment must also map scan2 -> scan1.
 - This script fixes that direction consistently.
 """
-import time 
+
+import time
 import argparse
 import copy
 import glob
@@ -802,10 +803,13 @@ from scipy.spatial.transform import Rotation
 # 1. BASIC HELPERS
 # ============================================================
 
+
 def natural_sort_key(path):
     name = os.path.basename(path)
-    return [int(text) if text.isdigit() else text.lower()
-            for text in re.split(r'(\d+)', name)]
+    return [
+        int(text) if text.isdigit() else text.lower()
+        for text in re.split(r"(\d+)", name)
+    ]
 
 
 def is_unix_timestamp(x):
@@ -823,7 +827,7 @@ def load_pcd(filepath):
 
 
 def parse_numeric_tokens(line):
-    tokens = re.split(r'[,\s]+', line.strip())
+    tokens = re.split(r"[,\s]+", line.strip())
     vals = []
     for tok in tokens:
         if tok == "":
@@ -839,6 +843,7 @@ def parse_numeric_tokens(line):
 # 2. DATASET LAYOUT: scan_root/000000/{cloud.pcd,data}
 # ============================================================
 
+
 def get_frame_entries(scan_root, scan_name="cloud.pcd", meta_name="data"):
     if not os.path.isdir(scan_root):
         print(f"[ERROR] Scan root not found: {scan_root}")
@@ -846,7 +851,7 @@ def get_frame_entries(scan_root, scan_name="cloud.pcd", meta_name="data"):
 
     folders = sorted(
         [d for d in glob.glob(os.path.join(scan_root, "*")) if os.path.isdir(d)],
-        key=natural_sort_key
+        key=natural_sort_key,
     )
 
     entries = []
@@ -855,12 +860,14 @@ def get_frame_entries(scan_root, scan_name="cloud.pcd", meta_name="data"):
         meta_path = os.path.join(folder, meta_name)
 
         if os.path.exists(scan_path):
-            entries.append({
-                "folder": folder,
-                "frame_name": os.path.basename(folder),
-                "scan_path": scan_path,
-                "meta_path": meta_path if os.path.exists(meta_path) else None
-            })
+            entries.append(
+                {
+                    "folder": folder,
+                    "frame_name": os.path.basename(folder),
+                    "scan_path": scan_path,
+                    "meta_path": meta_path if os.path.exists(meta_path) else None,
+                }
+            )
 
     if len(entries) == 0:
         print(f"[ERROR] No frame folders containing {scan_name} found in: {scan_root}")
@@ -871,7 +878,7 @@ def get_frame_entries(scan_root, scan_name="cloud.pcd", meta_name="data"):
 
 def load_scan_from_entries(entries, idx):
     if idx < 0 or idx >= len(entries):
-        print(f"[ERROR] Frame index out of range. Available: 0-{len(entries)-1}")
+        print(f"[ERROR] Frame index out of range. Available: 0-{len(entries) - 1}")
         sys.exit(1)
 
     entry = entries[idx]
@@ -881,6 +888,7 @@ def load_scan_from_entries(entries, idx):
 # ============================================================
 # 3. TIMESTAMP PARSING
 # ============================================================
+
 
 def read_text_file(filepath):
     if filepath is None or not os.path.exists(filepath):
@@ -902,24 +910,24 @@ def extract_timestamp_from_text(text):
         return None
 
     # 1) labeled: timestamp: 1654233181 775779453
-    m = re.search(r'(?:timestamp|stamp)\D+(\d{10})\D+(\d{1,9})', text, re.IGNORECASE)
+    m = re.search(r"(?:timestamp|stamp)\D+(\d{10})\D+(\d{1,9})", text, re.IGNORECASE)
     if m:
         sec = int(m.group(1))
         nsec = int(m.group(2))
         return sec + nsec * 1e-9
 
     # 2) labeled float: timestamp: 1654233181.775779453
-    m = re.search(r'(?:timestamp|stamp)\D+(\d{10}\.\d+)', text, re.IGNORECASE)
+    m = re.search(r"(?:timestamp|stamp)\D+(\d{10}\.\d+)", text, re.IGNORECASE)
     if m:
         return float(m.group(1))
 
     # 3) any float timestamp
-    m = re.search(r'(\d{10}\.\d+)', text)
+    m = re.search(r"(\d{10}\.\d+)", text)
     if m:
         return float(m.group(1))
 
     # 4) sec nsec pair anywhere
-    m = re.search(r'(\d{10})\s+(\d{1,9})', text)
+    m = re.search(r"(\d{10})\s+(\d{1,9})", text)
     if m:
         sec = int(m.group(1))
         nsec = int(m.group(2))
@@ -946,6 +954,7 @@ def read_frame_timestamp(meta_path):
 # 4. POSE PARSING
 # ============================================================
 
+
 def pose_xyz_quat_to_T(x, y, z, qx, qy, qz, qw):
     T = np.eye(4)
     T[:3, 3] = [x, y, z]
@@ -956,14 +965,16 @@ def pose_xyz_quat_to_T(x, y, z, qx, qy, qz, qw):
 def pose_xyz_rpy_to_T(x, y, z, roll, pitch, yaw, degrees=False):
     T = np.eye(4)
     T[:3, 3] = [x, y, z]
-    T[:3, :3] = Rotation.from_euler('xyz', [roll, pitch, yaw], degrees=degrees).as_matrix()
+    T[:3, :3] = Rotation.from_euler(
+        "xyz", [roll, pitch, yaw], degrees=degrees
+    ).as_matrix()
     return T
 
 
 def pose_xy_yaw_to_T(x, y, yaw, z=0.0, degrees=False):
     T = np.eye(4)
     T[:3, 3] = [x, y, z]
-    T[:3, :3] = Rotation.from_euler('z', yaw, degrees=degrees).as_matrix()
+    T[:3, :3] = Rotation.from_euler("z", yaw, degrees=degrees).as_matrix()
     return T
 
 
@@ -1003,7 +1014,9 @@ def parse_gt_row(values):
 
     if n == 5 and is_unix_timestamp(values[0]):
         ts = values[0]
-        T = pose_xy_yaw_to_T(values[1], values[2], values[4], z=values[3], degrees=False)
+        T = pose_xy_yaw_to_T(
+            values[1], values[2], values[4], z=values[3], degrees=False
+        )
         return ts, T
 
     if n == 4:
@@ -1012,7 +1025,9 @@ def parse_gt_row(values):
             T = pose_xy_yaw_to_T(values[1], values[2], values[3], z=0.0, degrees=False)
             return ts, T
         else:
-            T = pose_xy_yaw_to_T(values[0], values[1], values[3], z=values[2], degrees=False)
+            T = pose_xy_yaw_to_T(
+                values[0], values[1], values[3], z=values[2], degrees=False
+            )
             return None, T
 
     if n == 3:
@@ -1040,11 +1055,7 @@ def load_ground_truth(filepath):
 
             try:
                 ts, T = parse_gt_row(vals)
-                rows.append({
-                    "timestamp": ts,
-                    "T": T,
-                    "raw": vals
-                })
+                rows.append({"timestamp": ts, "T": T, "raw": vals})
             except Exception:
                 continue
 
@@ -1053,19 +1064,22 @@ def load_ground_truth(filepath):
         sys.exit(1)
 
     n_with_ts = sum(r["timestamp"] is not None for r in rows)
-    print(f"  Loaded {len(rows)} ground truth poses from {filepath} ({n_with_ts} rows have timestamps)")
+    print(
+        f"  Loaded {len(rows)} ground truth poses from {filepath} ({n_with_ts} rows have timestamps)"
+    )
     return rows
 
 
 def nearest_gt_index(frame_ts, gt_rows):
-    gt_timestamps = np.array([
-        np.nan if r["timestamp"] is None else float(r["timestamp"])
-        for r in gt_rows
-    ])
+    gt_timestamps = np.array(
+        [np.nan if r["timestamp"] is None else float(r["timestamp"]) for r in gt_rows]
+    )
 
     valid = np.where(~np.isnan(gt_timestamps))[0]
     if len(valid) == 0:
-        raise ValueError("GT file has no timestamps; cannot do timestamp-based matching.")
+        raise ValueError(
+            "GT file has no timestamps; cannot do timestamp-based matching."
+        )
 
     best = valid[np.argmin(np.abs(gt_timestamps[valid] - frame_ts))]
     return int(best)
@@ -1074,6 +1088,7 @@ def nearest_gt_index(frame_ts, gt_rows):
 # ============================================================
 # 5. TRANSFORMS / ERRORS
 # ============================================================
+
 
 def transform_from_A_to_B(T_A_world, T_B_world):
     """
@@ -1089,29 +1104,31 @@ def transform_from_A_to_B(T_A_world, T_B_world):
 
 def print_transform(T, label=""):
     t = T[:3, 3]
-    r = Rotation.from_matrix(T[:3, :3]).as_euler('xyz', degrees=True)
+    r = Rotation.from_matrix(T[:3, :3]).as_euler("xyz", degrees=True)
     dist = np.linalg.norm(t)
 
     print(f"  {label}")
     print(f"    Translation: [{t[0]:.4f}, {t[1]:.4f}, {t[2]:.4f}] (dist: {dist:.4f} m)")
-    print(f"    Rotation:    [{r[0]:.2f}, {r[1]:.2f}, {r[2]:.2f}] deg (roll, pitch, yaw)")
+    print(
+        f"    Rotation:    [{r[0]:.2f}, {r[1]:.2f}, {r[2]:.2f}] deg (roll, pitch, yaw)"
+    )
 
+    # def pose_error(T_est, T_gt):
+    #     trans_error = np.linalg.norm(T_est[:3, 3] - T_gt[:3, 3])
 
-# def pose_error(T_est, T_gt):
-#     trans_error = np.linalg.norm(T_est[:3, 3] - T_gt[:3, 3])
+    #     R_err = T_est[:3, :3].T @ T_gt[:3, :3]
+    #     val = np.clip((np.trace(R_err) - 1.0) / 2.0, -1.0, 1.0)
+    #     rot_error_deg = np.degrees(np.arccos(val))
 
-#     R_err = T_est[:3, :3].T @ T_gt[:3, :3]
-#     val = np.clip((np.trace(R_err) - 1.0) / 2.0, -1.0, 1.0)
-#     rot_error_deg = np.degrees(np.arccos(val))
+    #     return trans_error, rot_error_deg
 
-#     return trans_error, rot_error_deg
-
-## FIX POSE ERROR USING MATLAB-style absolute pose error:
+    ## FIX POSE ERROR USING MATLAB-style absolute pose error:
     """ MATLAB  AbsoluteError_i = P_gt_i * inv(P_est_i)
 
         Returns:
         trans_error (m), rot_error (deg) 
     """
+
 
 def pose_error(T_est, T_gt):
     T_err = T_gt @ np.linalg.inv(T_est)
@@ -1126,6 +1143,7 @@ def pose_error(T_est, T_gt):
 # ============================================================
 # 6. PREPROCESSING
 # ============================================================
+
 
 def preprocess(pcd, voxel_size=0.1):
     pcd_down = pcd.voxel_down_sample(voxel_size)
@@ -1142,6 +1160,7 @@ def preprocess(pcd, voxel_size=0.1):
 # ============================================================
 # 7. OVERLAP
 # ============================================================
+
 
 def check_overlap(target_scan, source_scan, T_source_to_target, overlap_radius=1.0):
     """
@@ -1245,8 +1264,15 @@ def overlap_label(overlap, threshold=0.30):
 # FPFH UTILITIES + Save FPFH CORRESPONDENCE + PLOT CORRESPONDENCE
 # ===================================================================
 
-def preprocess_for_fpfh(pcd, voxel_size=0.1, normal_radius=None, feature_radius=None,
-                        normal_max_nn=30, feature_max_nn=100):
+
+def preprocess_for_fpfh(
+    pcd,
+    voxel_size=0.1,
+    normal_radius=None,
+    feature_radius=None,
+    normal_max_nn=30,
+    feature_max_nn=100,
+):
     """
     Prepare a cloud for FPFH:
       1) estimate normals
@@ -1267,10 +1293,7 @@ def preprocess_for_fpfh(pcd, voxel_size=0.1, normal_radius=None, feature_radius=
         feature_radius = voxel_size * 5.0
 
     pcd_feat.estimate_normals(
-        o3d.geometry.KDTreeSearchParamHybrid(
-            radius=normal_radius,
-            max_nn=normal_max_nn
-        )
+        o3d.geometry.KDTreeSearchParamHybrid(radius=normal_radius, max_nn=normal_max_nn)
     )
 
     try:
@@ -1281,18 +1304,25 @@ def preprocess_for_fpfh(pcd, voxel_size=0.1, normal_radius=None, feature_radius=
     fpfh = o3d.pipelines.registration.compute_fpfh_feature(
         pcd_feat,
         o3d.geometry.KDTreeSearchParamHybrid(
-            radius=feature_radius,
-            max_nn=feature_max_nn
-        )
+            radius=feature_radius, max_nn=feature_max_nn
+        ),
     )
 
     return pcd_feat, fpfh
 
 
-def plot_fpfh_bins_exact(pcd, voxel_size=0.1, point_idx=0, prefix="scan",
-                         normal_radius=None, feature_radius=None,
-                         normal_max_nn=30, feature_max_nn=100,
-                         save=True, show=True):
+def plot_fpfh_bins_exact(
+    pcd,
+    voxel_size=0.1,
+    point_idx=0,
+    prefix="scan",
+    normal_radius=None,
+    feature_radius=None,
+    normal_max_nn=30,
+    feature_max_nn=100,
+    save=True,
+    show=True,
+):
     """
     Plot the exact FPFH descriptor of one selected point.
     No fallback, no strongest-descriptor replacement, no top-k logic.
@@ -1303,14 +1333,14 @@ def plot_fpfh_bins_exact(pcd, voxel_size=0.1, point_idx=0, prefix="scan",
         normal_radius=normal_radius,
         feature_radius=feature_radius,
         normal_max_nn=normal_max_nn,
-        feature_max_nn=feature_max_nn
+        feature_max_nn=feature_max_nn,
     )
 
     if fpfh is None:
         print(f"[WARNING] No FPFH descriptors available for {prefix}.")
         return
 
-    fpfh_array = np.asarray(fpfh.data)   # shape: (33, N)
+    fpfh_array = np.asarray(fpfh.data)  # shape: (33, N)
 
     if fpfh_array.ndim != 2 or fpfh_array.shape[0] != 33:
         print(f"[WARNING] Unexpected FPFH shape for {prefix}: {fpfh_array.shape}")
@@ -1322,15 +1352,17 @@ def plot_fpfh_bins_exact(pcd, voxel_size=0.1, point_idx=0, prefix="scan",
         return
 
     if point_idx < 0 or point_idx >= n_points:
-        print(f"[ERROR] point_idx={point_idx} out of range for {prefix}. "
-              f"Valid range: [0, {n_points - 1}]")
+        print(
+            f"[ERROR] point_idx={point_idx} out of range for {prefix}. "
+            f"Valid range: [0, {n_points - 1}]"
+        )
         return
 
     desc = fpfh_array[:, point_idx]
     desc_norm = np.linalg.norm(desc)
 
     alpha_bins = desc[0:11]
-    phi_bins   = desc[11:22]
+    phi_bins = desc[11:22]
     theta_bins = desc[22:33]
 
     print(f"  {prefix} FPFH shape: {fpfh_array.shape}")
@@ -1341,53 +1373,58 @@ def plot_fpfh_bins_exact(pcd, voxel_size=0.1, point_idx=0, prefix="scan",
 
     fig, axes = plt.subplots(1, 3, figsize=(15, 4))
 
-    axes[0].bar(range(11), alpha_bins, color='steelblue', edgecolor='black', linewidth=0.5)
-    axes[0].set_title(r'$\alpha$')
-    axes[0].set_xlabel('Bin')
-    axes[0].set_ylabel('Value')
+    axes[0].bar(
+        range(11), alpha_bins, color="steelblue", edgecolor="black", linewidth=0.5
+    )
+    axes[0].set_title(r"$\alpha$")
+    axes[0].set_xlabel("Bin")
+    axes[0].set_ylabel("Value")
     axes[0].grid(True, alpha=0.3)
 
-    axes[1].bar(range(11), phi_bins, color='coral', edgecolor='black', linewidth=0.5)
-    axes[1].set_title(r'$\phi$')
-    axes[1].set_xlabel('Bin')
+    axes[1].bar(range(11), phi_bins, color="coral", edgecolor="black", linewidth=0.5)
+    axes[1].set_title(r"$\phi$")
+    axes[1].set_xlabel("Bin")
     axes[1].grid(True, alpha=0.3)
 
-    axes[2].bar(range(11), theta_bins, color='seagreen', edgecolor='black', linewidth=0.5)
-    axes[2].set_title(r'$\theta$')
-    axes[2].set_xlabel('Bin')
+    axes[2].bar(
+        range(11), theta_bins, color="seagreen", edgecolor="black", linewidth=0.5
+    )
+    axes[2].set_title(r"$\theta$")
+    axes[2].set_xlabel("Bin")
     axes[2].grid(True, alpha=0.3)
 
     fig.suptitle(
-        f'{prefix} | point {point_idx} | norm={desc_norm:.3f}',
-        fontsize=13, fontweight='bold'
+        f"{prefix} | point {point_idx} | norm={desc_norm:.3f}",
+        fontsize=13,
+        fontweight="bold",
     )
     plt.subplots_adjust(top=0.82, wspace=0.28)
 
     if save:
         out1 = f"{prefix}_point_{point_idx}_split.png"
-        fig.savefig(out1, dpi=150, bbox_inches='tight')
+        fig.savefig(out1, dpi=150, bbox_inches="tight")
         print(f"  Saved: {out1}")
 
     fig2, ax = plt.subplots(figsize=(16, 5))
-    colors = ['steelblue'] * 11 + ['coral'] * 11 + ['seagreen'] * 11
-    ax.bar(range(33), desc, color=colors, edgecolor='black', linewidth=0.5)
-    ax.axvline(x=10.5, color='black', linestyle='--', linewidth=1.0)
-    ax.axvline(x=21.5, color='black', linestyle='--', linewidth=1.0)
-    ax.set_xlabel('Bin Index')
-    ax.set_ylabel('Value')
-    ax.set_title(f'Full FPFH Descriptor for {prefix}, point {point_idx}')
+    colors = ["steelblue"] * 11 + ["coral"] * 11 + ["seagreen"] * 11
+    ax.bar(range(33), desc, color=colors, edgecolor="black", linewidth=0.5)
+    ax.axvline(x=10.5, color="black", linestyle="--", linewidth=1.0)
+    ax.axvline(x=21.5, color="black", linestyle="--", linewidth=1.0)
+    ax.set_xlabel("Bin Index")
+    ax.set_ylabel("Value")
+    ax.set_title(f"Full FPFH Descriptor for {prefix}, point {point_idx}")
     ax.grid(True, alpha=0.3)
 
     ymax = max(np.max(desc), 1.0)
-    ax.text(5,  ymax * 0.92, r'$\alpha$', ha='center', fontsize=16)
-    ax.text(16, ymax * 0.92, r'$\phi$',   ha='center', fontsize=16)
-    ax.text(27, ymax * 0.92, r'$\theta$', ha='center', fontsize=16)
+    ax.text(5, ymax * 0.92, r"$\alpha$", ha="center", fontsize=16)
+    ax.text(16, ymax * 0.92, r"$\phi$", ha="center", fontsize=16)
+    ax.text(27, ymax * 0.92, r"$\theta$", ha="center", fontsize=16)
 
     plt.subplots_adjust(top=0.88, bottom=0.15)
 
     if save:
         out2 = f"{prefix}_point_{point_idx}_full.png"
-        fig2.savefig(out2, dpi=150, bbox_inches='tight')
+        fig2.savefig(out2, dpi=150, bbox_inches="tight")
         print(f"  Saved: {out2}")
 
     if show:
@@ -1397,13 +1434,20 @@ def plot_fpfh_bins_exact(pcd, voxel_size=0.1, point_idx=0, prefix="scan",
         plt.close(fig2)
 
 
-def run_fpfh_ransac_icp(source, target, voxel_size=0.1, max_dist=2.0,
-                        normal_radius=None, feature_radius=None,
-                        normal_max_nn=30, feature_max_nn=100,
-                        ransac_distance_threshold=None,
-                        ransac_n=4,
-                        ransac_max_iteration=100000,
-                        ransac_confidence=500):
+def run_fpfh_ransac_icp(
+    source,
+    target,
+    voxel_size=0.1,
+    max_dist=2.0,
+    normal_radius=None,
+    feature_radius=None,
+    normal_max_nn=30,
+    feature_max_nn=100,
+    ransac_distance_threshold=None,
+    ransac_n=4,
+    ransac_max_iteration=100000,
+    ransac_confidence=500,
+):
     """
     FPFH feature matching -> global RANSAC -> ICP refinement.
 
@@ -1426,7 +1470,7 @@ def run_fpfh_ransac_icp(source, target, voxel_size=0.1, max_dist=2.0,
         normal_radius=normal_radius,
         feature_radius=feature_radius,
         normal_max_nn=normal_max_nn,
-        feature_max_nn=feature_max_nn
+        feature_max_nn=feature_max_nn,
     )
 
     target_feat_cloud, target_fpfh = preprocess_for_fpfh(
@@ -1435,7 +1479,7 @@ def run_fpfh_ransac_icp(source, target, voxel_size=0.1, max_dist=2.0,
         normal_radius=normal_radius,
         feature_radius=feature_radius,
         normal_max_nn=normal_max_nn,
-        feature_max_nn=feature_max_nn
+        feature_max_nn=feature_max_nn,
     )
 
     if source_fpfh is None or target_fpfh is None:
@@ -1451,16 +1495,19 @@ def run_fpfh_ransac_icp(source, target, voxel_size=0.1, max_dist=2.0,
         target_fpfh,
         mutual_filter=True,
         max_correspondence_distance=ransac_distance_threshold,
-        estimation_method=o3d.pipelines.registration.TransformationEstimationPointToPoint(False),
+        estimation_method=o3d.pipelines.registration.TransformationEstimationPointToPoint(
+            False
+        ),
         ransac_n=ransac_n,
         checkers=[
             o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.9),
-            o3d.pipelines.registration.CorrespondenceCheckerBasedOnDistance(ransac_distance_threshold)
+            o3d.pipelines.registration.CorrespondenceCheckerBasedOnDistance(
+                ransac_distance_threshold
+            ),
         ],
         criteria=o3d.pipelines.registration.RANSACConvergenceCriteria(
-            ransac_max_iteration,
-            ransac_confidence
-        )
+            ransac_max_iteration, ransac_confidence
+        ),
     )
 
     src_icp = copy.deepcopy(source)
@@ -1468,14 +1515,12 @@ def run_fpfh_ransac_icp(source, target, voxel_size=0.1, max_dist=2.0,
 
     src_icp.estimate_normals(
         search_param=o3d.geometry.KDTreeSearchParamHybrid(
-            radius=normal_radius,
-            max_nn=normal_max_nn
+            radius=normal_radius, max_nn=normal_max_nn
         )
     )
     tgt_icp.estimate_normals(
         search_param=o3d.geometry.KDTreeSearchParamHybrid(
-            radius=normal_radius,
-            max_nn=normal_max_nn
+            radius=normal_radius, max_nn=normal_max_nn
         )
     )
 
@@ -1486,16 +1531,16 @@ def run_fpfh_ransac_icp(source, target, voxel_size=0.1, max_dist=2.0,
         result_ransac.transformation,
         o3d.pipelines.registration.TransformationEstimationPointToPlane(),
         o3d.pipelines.registration.ICPConvergenceCriteria(
-            max_iteration=500,
-            relative_fitness=1e-6,
-            relative_rmse=1e-6
-        )
+            max_iteration=500, relative_fitness=1e-6, relative_rmse=1e-6
+        ),
     )
 
     return result_icp, result_ransac
 
+
 def save_fpfh_correspondences(
-    source, target,
+    source,
+    target,
     voxel_size=0.1,
     normal_radius=None,
     feature_radius=None,
@@ -1504,7 +1549,7 @@ def save_fpfh_correspondences(
     transform_for_check=None,
     max_residual=1.0,
     mutual_filter=True,
-    out_prefix="fpfh_corr"
+    out_prefix="fpfh_corr",
 ):
     src_feat_cloud, src_fpfh = preprocess_for_fpfh(
         source,
@@ -1512,7 +1557,7 @@ def save_fpfh_correspondences(
         normal_radius=normal_radius,
         feature_radius=feature_radius,
         normal_max_nn=normal_max_nn,
-        feature_max_nn=feature_max_nn
+        feature_max_nn=feature_max_nn,
     )
     tgt_feat_cloud, tgt_fpfh = preprocess_for_fpfh(
         target,
@@ -1520,7 +1565,7 @@ def save_fpfh_correspondences(
         normal_radius=normal_radius,
         feature_radius=feature_radius,
         normal_max_nn=normal_max_nn,
-        feature_max_nn=feature_max_nn
+        feature_max_nn=feature_max_nn,
     )
 
     if src_fpfh is None or tgt_fpfh is None:
@@ -1530,8 +1575,8 @@ def save_fpfh_correspondences(
     src_pts = np.asarray(src_feat_cloud.points)
     tgt_pts = np.asarray(tgt_feat_cloud.points)
 
-    src_desc = np.asarray(src_fpfh.data).T   # (Ns, 33)
-    tgt_desc = np.asarray(tgt_fpfh.data).T   # (Nt, 33)
+    src_desc = np.asarray(src_fpfh.data).T  # (Ns, 33)
+    tgt_desc = np.asarray(tgt_fpfh.data).T  # (Nt, 33)
 
     if len(src_desc) == 0 or len(tgt_desc) == 0:
         print("WARNING: Empty FPFH descriptors.")
@@ -1571,14 +1616,21 @@ def save_fpfh_correspondences(
             residual = np.nan
             is_good = False
 
-        rows.append([
-            i, j,
-            p_src[0], p_src[1], p_src[2],
-            p_tgt[0], p_tgt[1], p_tgt[2],
-            src_to_tgt_dist[i],
-            residual,
-            int(is_good)
-        ])
+        rows.append(
+            [
+                i,
+                j,
+                p_src[0],
+                p_src[1],
+                p_src[2],
+                p_tgt[0],
+                p_tgt[1],
+                p_tgt[2],
+                src_to_tgt_dist[i],
+                residual,
+                int(is_good),
+            ]
+        )
 
         matched_src_points.append(p_src)
         matched_tgt_points.append(p_tgt)
@@ -1595,17 +1647,31 @@ def save_fpfh_correspondences(
         "tgt_x,tgt_y,tgt_z,"
         "fpfh_l2_distance,residual_after_transform,is_geometrically_consistent"
     )
-    np.savetxt(f"{out_prefix}_table.csv", rows, delimiter=",", header=header, comments="")
+    np.savetxt(
+        f"{out_prefix}_table.csv", rows, delimiter=",", header=header, comments=""
+    )
 
     src_all = o3d.geometry.PointCloud()
     tgt_all = o3d.geometry.PointCloud()
-    src_all.points = o3d.utility.Vector3dVector(np.array(matched_src_points) if len(matched_src_points) else np.empty((0, 3)))
-    tgt_all.points = o3d.utility.Vector3dVector(np.array(matched_tgt_points) if len(matched_tgt_points) else np.empty((0, 3)))
+    src_all.points = o3d.utility.Vector3dVector(
+        np.array(matched_src_points) if len(matched_src_points) else np.empty((0, 3))
+    )
+    tgt_all.points = o3d.utility.Vector3dVector(
+        np.array(matched_tgt_points) if len(matched_tgt_points) else np.empty((0, 3))
+    )
 
     src_good = o3d.geometry.PointCloud()
     tgt_good = o3d.geometry.PointCloud()
-    src_good.points = o3d.utility.Vector3dVector(np.array(matched_src_points_good) if len(matched_src_points_good) else np.empty((0, 3)))
-    tgt_good.points = o3d.utility.Vector3dVector(np.array(matched_tgt_points_good) if len(matched_tgt_points_good) else np.empty((0, 3)))
+    src_good.points = o3d.utility.Vector3dVector(
+        np.array(matched_src_points_good)
+        if len(matched_src_points_good)
+        else np.empty((0, 3))
+    )
+    tgt_good.points = o3d.utility.Vector3dVector(
+        np.array(matched_tgt_points_good)
+        if len(matched_tgt_points_good)
+        else np.empty((0, 3))
+    )
 
     o3d.io.write_point_cloud(f"{out_prefix}_source_matches.pcd", src_all)
     o3d.io.write_point_cloud(f"{out_prefix}_target_matches.pcd", tgt_all)
@@ -1621,12 +1687,15 @@ def save_fpfh_correspondences(
     print(f"Geometrically consistent correspondences: {len(matched_src_points_good)}")
 
     return {
-    "rows": rows,
-    "source_feat_cloud": src_feat_cloud,
-    "target_feat_cloud": tgt_feat_cloud,
-    # "corr_pairs": rows
-    "corr_pairs": rows[:, :2].astype(int) if len(rows) > 0 else np.empty((0, 2), dtype=int)
+        "rows": rows,
+        "source_feat_cloud": src_feat_cloud,
+        "target_feat_cloud": tgt_feat_cloud,
+        # "corr_pairs": rows
+        "corr_pairs": rows[:, :2].astype(int)
+        if len(rows) > 0
+        else np.empty((0, 2), dtype=int),
     }
+
 
 def plot_fpfh_correspondences_2d(
     source_feat_cloud,
@@ -1637,7 +1706,7 @@ def plot_fpfh_correspondences_2d(
     residual_threshold=1.0,
     out_prefix="fpfh_corr",
     save=True,
-    show=True
+    show=True,
 ):
     src_pts = np.asarray(source_feat_cloud.points)
     tgt_pts = np.asarray(target_feat_cloud.points)
@@ -1664,17 +1733,23 @@ def plot_fpfh_correspondences_2d(
     residuals = np.linalg.norm(src_sel_tf - tgt_sel, axis=1)
 
     fig, ax = plt.subplots(figsize=(10, 8))
-    ax.scatter(tgt_pts[:, 0], tgt_pts[:, 1], s=1, c='tab:blue', label='Target scan')
-    ax.scatter(src_sel_tf[:, 0], src_sel_tf[:, 1], s=6, c='tab:orange', label='Matched source points')
+    ax.scatter(tgt_pts[:, 0], tgt_pts[:, 1], s=1, c="tab:blue", label="Target scan")
+    ax.scatter(
+        src_sel_tf[:, 0],
+        src_sel_tf[:, 1],
+        s=6,
+        c="tab:orange",
+        label="Matched source points",
+    )
 
     for i in range(len(src_sel_tf)):
-        color = 'limegreen' if residuals[i] <= residual_threshold else 'red'
+        color = "limegreen" if residuals[i] <= residual_threshold else "red"
         ax.plot(
             [src_sel_tf[i, 0], tgt_sel[i, 0]],
             [src_sel_tf[i, 1], tgt_sel[i, 1]],
             color=color,
             alpha=0.6,
-            linewidth=0.8
+            linewidth=0.8,
         )
 
     ax.set_title("FPFH correspondences in 2D")
@@ -1694,9 +1769,14 @@ def plot_fpfh_correspondences_2d(
         plt.close(fig)
 
     fig2, ax2 = plt.subplots(figsize=(8, 5))
-    ax2.hist(residuals, bins=40, color='slateblue', edgecolor='black', alpha=0.85)
-    ax2.axvline(residual_threshold, color='red', linestyle='--', linewidth=1.5,
-                label=f"threshold = {residual_threshold:.3f} m")
+    ax2.hist(residuals, bins=40, color="slateblue", edgecolor="black", alpha=0.85)
+    ax2.axvline(
+        residual_threshold,
+        color="red",
+        linestyle="--",
+        linewidth=1.5,
+        label=f"threshold = {residual_threshold:.3f} m",
+    )
     ax2.set_title("FPFH correspondence residuals")
     ax2.set_xlabel("Residual after transform (m)")
     ax2.set_ylabel("Count")
@@ -1712,14 +1792,19 @@ def plot_fpfh_correspondences_2d(
     else:
         plt.close(fig2)
     # corr_pairs = rows[:, :2].astype(int) if len(rows) > 0 else np.empty((0, 2), dtype=int)
-    corr_pairs = correspondences[:, :2].astype(int) if len(correspondences) > 0 else np.empty((0, 2), dtype=int)
+    corr_pairs = (
+        correspondences[:, :2].astype(int)
+        if len(correspondences) > 0
+        else np.empty((0, 2), dtype=int)
+    )
 
     return {
-    "rows": correspondences,
-    "source_feat_cloud": source_feat_cloud,
-    "target_feat_cloud": target_feat_cloud,
-    "corr_pairs": corr_pairs
+        "rows": correspondences,
+        "source_feat_cloud": source_feat_cloud,
+        "target_feat_cloud": target_feat_cloud,
+        "corr_pairs": corr_pairs,
     }
+
 
 def plot_fpfh_good_matches_2d(
     source_feat_cloud,
@@ -1728,7 +1813,7 @@ def plot_fpfh_good_matches_2d(
     out_prefix="fpfh_corr",
     save=True,
     show=True,
-    transform_for_check=None
+    transform_for_check=None,
 ):
     src_vis = copy.deepcopy(source_feat_cloud)
     if transform_for_check is not None:
@@ -1753,37 +1838,53 @@ def plot_fpfh_good_matches_2d(
 
     fig, ax = plt.subplots(figsize=(10, 8))
 
-    ax.scatter(tgt_pts[:, 0], tgt_pts[:, 1], s=8, c='tab:blue',
-               label='Target scan points', alpha=0.8)
-    ax.scatter(src_pts[:, 0], src_pts[:, 1], s=8, c='tab:orange',
-               label='Source scan points', alpha=0.8)
+    ax.scatter(
+        tgt_pts[:, 0],
+        tgt_pts[:, 1],
+        s=8,
+        c="tab:blue",
+        label="Target scan points",
+        alpha=0.8,
+    )
+    ax.scatter(
+        src_pts[:, 0],
+        src_pts[:, 1],
+        s=8,
+        c="tab:orange",
+        label="Source scan points",
+        alpha=0.8,
+    )
 
     for i, j in corr_pairs:
         if i < len(src_pts) and j < len(tgt_pts):
             ax.plot(
                 [src_pts[i, 0], tgt_pts[j, 0]],
                 [src_pts[i, 1], tgt_pts[j, 1]],
-                color='green',
+                color="green",
                 linewidth=1.5,
-                alpha=0.8
+                alpha=0.8,
             )
 
-    ax.set_title(f"Geometrically consistent FPFH correspondences in 2D ({len(good_corr)} matches)")
+    ax.set_title(
+        f"Geometrically consistent FPFH correspondences in 2D ({len(good_corr)} matches)"
+    )
     ax.set_xlabel("X (m)")
     ax.set_ylabel("Y (m)")
-    ax.set_aspect('equal')
+    ax.set_aspect("equal")
     ax.grid(True, alpha=0.3)
-    ax.legend(loc='upper left', markerscale=2)
+    ax.legend(loc="upper left", markerscale=2)
 
     if save:
         out = f"{out_prefix}_good_corr2d.png"
-        fig.savefig(out, dpi=150, bbox_inches='tight')
+        fig.savefig(out, dpi=150, bbox_inches="tight")
         print(f"Saved {out}")
 
     if show:
         plt.show()
     else:
         plt.close(fig)
+
+
 def plot_fpfh_correspondences_2d_colored_by_residual(
     source_feat_cloud,
     target_feat_cloud,
@@ -1793,7 +1894,7 @@ def plot_fpfh_correspondences_2d_colored_by_residual(
     save=True,
     show=True,
     max_draw=None,
-    transform_for_check=None
+    transform_for_check=None,
 ):
     src_vis = copy.deepcopy(source_feat_cloud)
     if transform_for_check is not None:
@@ -1818,12 +1919,20 @@ def plot_fpfh_correspondences_2d_colored_by_residual(
     fig, ax = plt.subplots(figsize=(10, 8))
 
     ax.scatter(
-        tgt_pts[:, 0], tgt_pts[:, 1],
-        s=8, c='tab:blue', label='Target scan points', alpha=0.8
+        tgt_pts[:, 0],
+        tgt_pts[:, 1],
+        s=8,
+        c="tab:blue",
+        label="Target scan points",
+        alpha=0.8,
     )
     ax.scatter(
-        src_pts[:, 0], src_pts[:, 1],
-        s=8, c='tab:orange', label='Source scan points', alpha=0.8
+        src_pts[:, 0],
+        src_pts[:, 1],
+        s=8,
+        c="tab:orange",
+        label="Source scan points",
+        alpha=0.8,
     )
 
     cmap = plt.cm.RdYlGn_r
@@ -1836,7 +1945,7 @@ def plot_fpfh_correspondences_2d_colored_by_residual(
     for (i, j), r in zip(corr_pairs, residuals):
         if i < len(src_pts) and j < len(tgt_pts):
             if np.isnan(r):
-                color = 'gray'
+                color = "gray"
             else:
                 rn = np.clip(r / vmax, 0.0, 1.0)
                 color = cmap(rn)
@@ -1846,7 +1955,7 @@ def plot_fpfh_correspondences_2d_colored_by_residual(
                 [src_pts[i, 1], tgt_pts[j, 1]],
                 color=color,
                 linewidth=1.2,
-                alpha=0.75
+                alpha=0.75,
             )
 
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=0.0, vmax=vmax))
@@ -1857,76 +1966,89 @@ def plot_fpfh_correspondences_2d_colored_by_residual(
     ax.set_title("FPFH correspondences in 2D colored by residual")
     ax.set_xlabel("X (m)")
     ax.set_ylabel("Y (m)")
-    ax.set_aspect('equal')
+    ax.set_aspect("equal")
     ax.grid(True, alpha=0.3)
-    ax.legend(loc='upper left', markerscale=2)
+    ax.legend(loc="upper left", markerscale=2)
 
     if save:
         out = f"{out_prefix}_corr2d_colored_residual.png"
-        fig.savefig(out, dpi=150, bbox_inches='tight')
+        fig.savefig(out, dpi=150, bbox_inches="tight")
         print(f"Saved {out}")
 
     if show:
         plt.show()
     else:
         plt.close(fig)
+
+
 # ============================================================
 # 8. ICP + SCAN MATCHING
 # ============================================================
+
 
 def ensure_normals(pcd):
     if not pcd.has_normals():
         pcd.estimate_normals(
             search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=1.0, max_nn=30)
         )
-#ICP Point to Point
+
+
+# ICP Point to Point
+
 
 def run_icp_point_to_point(source, target, init_T=np.eye(4), max_dist=2.0):
     return o3d.pipelines.registration.registration_icp(
-        source, target, max_dist, init_T,
+        source,
+        target,
+        max_dist,
+        init_T,
         o3d.pipelines.registration.TransformationEstimationPointToPoint(),
         o3d.pipelines.registration.ICPConvergenceCriteria(
-            max_iteration=500,
-            relative_fitness=1e-6,
-            relative_rmse=1e-6
-        )
+            max_iteration=500, relative_fitness=1e-6, relative_rmse=1e-6
+        ),
     )
 
-#ICP Point to Plane
+
+# ICP Point to Plane
 def run_icp_point_to_plane(source, target, init_T=np.eye(4), max_dist=2.0):
     ensure_normals(source)
     ensure_normals(target)
 
     return o3d.pipelines.registration.registration_icp(
-        source, target, max_dist, init_T,
+        source,
+        target,
+        max_dist,
+        init_T,
         o3d.pipelines.registration.TransformationEstimationPointToPlane(),
         o3d.pipelines.registration.ICPConvergenceCriteria(
-            max_iteration=500,
-            relative_fitness=1e-6,
-            relative_rmse=1e-6
-        )
+            max_iteration=500, relative_fitness=1e-6, relative_rmse=1e-6
+        ),
     )
-#Generalized ICP
+
+
+# Generalized ICP
+
 
 def run_generalized_icp(source, target, init_T=np.eye(4), max_dist=2.0):
     ensure_normals(source)
     ensure_normals(target)
 
     return o3d.pipelines.registration.registration_generalized_icp(
-        source, target, max_dist, init_T,
+        source,
+        target,
+        max_dist,
+        init_T,
         o3d.pipelines.registration.TransformationEstimationForGeneralizedICP(),
         o3d.pipelines.registration.ICPConvergenceCriteria(
-            max_iteration=500,
-            relative_fitness=1e-6,
-            relative_rmse=1e-6
-        )
+            max_iteration=500, relative_fitness=1e-6, relative_rmse=1e-6
+        ),
     )
-
 
 
 # ============================================================
 # 9. VISUALIZATION
 # ============================================================
+
 
 def visualize_scans_3d(scan1, scan2, T_est_source_to_target, T_gt_source_to_target):
     """
@@ -1953,11 +2075,14 @@ def visualize_scans_3d(scan1, scan2, T_est_source_to_target, T_gt_source_to_targ
     o3d.visualization.draw_geometries(
         [s1, s2_est, s2_gt],
         window_name="Scan Matching: Red=reference, Green=estimated, Blue=ground truth",
-        width=1200, height=800
+        width=1200,
+        height=800,
     )
 
 
-def visualize_scans_2d(scan1, scan2, T_est_source_to_target, T_gt_source_to_target, save=False):
+def visualize_scans_2d(
+    scan1, scan2, T_est_source_to_target, T_gt_source_to_target, save=False
+):
     pts1 = np.asarray(scan1.points)
     pts2 = np.asarray(scan2.points)
 
@@ -1970,40 +2095,54 @@ def visualize_scans_2d(scan1, scan2, T_est_source_to_target, T_gt_source_to_targ
     pts2_gt = np.asarray(s2_gt.points)
 
     fig1, ax1 = plt.subplots(figsize=(10, 8))
-    ax1.scatter(pts1[:, 0], pts1[:, 1], s=1, c='tab:blue', label='Reference scan')
-    ax1.scatter(pts2[:, 0], pts2[:, 1], s=1, c='tab:orange', label='Current scan')
-    ax1.set_title('Before alignment')
-    ax1.set_xlabel('X (m)')
-    ax1.set_ylabel('Y (m)')
-    ax1.set_aspect('equal')
+    ax1.scatter(pts1[:, 0], pts1[:, 1], s=1, c="tab:blue", label="Reference scan")
+    ax1.scatter(pts2[:, 0], pts2[:, 1], s=1, c="tab:orange", label="Current scan")
+    ax1.set_title("Before alignment")
+    ax1.set_xlabel("X (m)")
+    ax1.set_ylabel("Y (m)")
+    ax1.set_aspect("equal")
     ax1.grid(True, alpha=0.3)
-    ax1.legend(loc='upper left', markerscale=5)
+    ax1.legend(loc="upper left", markerscale=5)
 
     fig2, ax2 = plt.subplots(figsize=(10, 8))
-    ax2.scatter(pts1[:, 0], pts1[:, 1], s=1, c='tab:blue', label='Reference scan')
-    ax2.scatter(pts2_est[:, 0], pts2_est[:, 1], s=1, c='tab:orange', label='Scan2 aligned by estimated pose')
-    ax2.set_title('Estimated alignment')
-    ax2.set_xlabel('X (m)')
-    ax2.set_ylabel('Y (m)')
-    ax2.set_aspect('equal')
+    ax2.scatter(pts1[:, 0], pts1[:, 1], s=1, c="tab:blue", label="Reference scan")
+    ax2.scatter(
+        pts2_est[:, 0],
+        pts2_est[:, 1],
+        s=1,
+        c="tab:orange",
+        label="Scan2 aligned by estimated pose",
+    )
+    ax2.set_title("Estimated alignment")
+    ax2.set_xlabel("X (m)")
+    ax2.set_ylabel("Y (m)")
+    ax2.set_aspect("equal")
     ax2.grid(True, alpha=0.3)
-    ax2.legend(loc='upper left', markerscale=5)
+    ax2.legend(loc="upper left", markerscale=5)
 
     fig3, ax3 = plt.subplots(figsize=(10, 8))
-    ax3.scatter(pts1[:, 0], pts1[:, 1], s=1, c='tab:blue', label='Reference scan')
-    ax3.scatter(pts2_gt[:, 0], pts2_gt[:, 1], s=1, c='tab:green', label='Scan2 aligned by GT pose')
-    ax3.set_title('Ground-truth alignment')
-    ax3.set_xlabel('X (m)')
-    ax3.set_ylabel('Y (m)')
-    ax3.set_aspect('equal')
+    ax3.scatter(pts1[:, 0], pts1[:, 1], s=1, c="tab:blue", label="Reference scan")
+    ax3.scatter(
+        pts2_gt[:, 0],
+        pts2_gt[:, 1],
+        s=1,
+        c="tab:green",
+        label="Scan2 aligned by GT pose",
+    )
+    ax3.set_title("Ground-truth alignment")
+    ax3.set_xlabel("X (m)")
+    ax3.set_ylabel("Y (m)")
+    ax3.set_aspect("equal")
     ax3.grid(True, alpha=0.3)
-    ax3.legend(loc='upper left', markerscale=5)
+    ax3.legend(loc="upper left", markerscale=5)
 
     if save:
-        fig1.savefig("plot_before_alignment.png", dpi=150, bbox_inches='tight')
-        fig2.savefig("plot_icp_aligned.png", dpi=150, bbox_inches='tight')
-        fig3.savefig("plot_gt_aligned.png", dpi=150, bbox_inches='tight')
-        print("  Saved: plot_before_alignment.png, plot_icp_aligned.png, plot_gt_aligned.png")
+        fig1.savefig("plot_before_alignment.png", dpi=150, bbox_inches="tight")
+        fig2.savefig("plot_icp_aligned.png", dpi=150, bbox_inches="tight")
+        fig3.savefig("plot_gt_aligned.png", dpi=150, bbox_inches="tight")
+        print(
+            "  Saved: plot_before_alignment.png, plot_icp_aligned.png, plot_gt_aligned.png"
+        )
 
     plt.show()
 
@@ -2011,6 +2150,7 @@ def visualize_scans_2d(scan1, scan2, T_est_source_to_target, T_gt_source_to_targ
 # ============================================================
 # 10. ARGUMENT VALIDATION
 # ============================================================
+
 
 def validate_inputs(args):
     using_root = args.scan_root is not None
@@ -2025,7 +2165,9 @@ def validate_inputs(args):
         sys.exit(1)
 
     if using_pair and (args.scan1 is None or args.scan2 is None):
-        print("[ERROR] If using explicit file mode, both --scan1 and --scan2 are required.")
+        print(
+            "[ERROR] If using explicit file mode, both --scan1 and --scan2 are required."
+        )
         sys.exit(1)
 
     if (args.pose1 is None) ^ (args.pose2 is None):
@@ -2045,98 +2187,183 @@ def validate_inputs(args):
 # 11. MAIN
 # ============================================================
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="Evaluate scan matching between two real radar point clouds"
     )
 
     # Dataset folder mode
-    parser.add_argument("--scan_root", "--scan_dir", dest="scan_root", default=None,
-                        help="Root folder containing frame folders like 000000/000001/...")
+    parser.add_argument(
+        "--scan_root",
+        "--scan_dir",
+        dest="scan_root",
+        default=None,
+        help="Root folder containing frame folders like 000000/000001/...",
+    )
 
-    parser.add_argument("--scan_name", default="cloud.pcd",
-                        help="Point cloud filename inside each frame folder (default: cloud.pcd)")
-    parser.add_argument("--meta_name", default="data",
-                        help="Metadata filename inside each frame folder (default: data)")
+    parser.add_argument(
+        "--scan_name",
+        default="cloud.pcd",
+        help="Point cloud filename inside each frame folder (default: cloud.pcd)",
+    )
+    parser.add_argument(
+        "--meta_name",
+        default="data",
+        help="Metadata filename inside each frame folder (default: data)",
+    )
 
     # Explicit file mode
-    parser.add_argument("--scan1", default=None,
-                        help="Path to scan1 (reference / target)")
-    parser.add_argument("--scan2", default=None,
-                        help="Path to scan2 (current / source)")
-    parser.add_argument("--data1", default=None,
-                        help="Metadata file for scan1 (used to extract timestamp)")
-    parser.add_argument("--data2", default=None,
-                        help="Metadata file for scan2 (used to extract timestamp)")
-    parser.add_argument("--stamp1", type=float, default=None,
-                        help="Explicit timestamp for scan1")
-    parser.add_argument("--stamp2", type=float, default=None,
-                        help="Explicit timestamp for scan2")
+    parser.add_argument(
+        "--scan1", default=None, help="Path to scan1 (reference / target)"
+    )
+    parser.add_argument(
+        "--scan2", default=None, help="Path to scan2 (current / source)"
+    )
+    parser.add_argument(
+        "--data1",
+        default=None,
+        help="Metadata file for scan1 (used to extract timestamp)",
+    )
+    parser.add_argument(
+        "--data2",
+        default=None,
+        help="Metadata file for scan2 (used to extract timestamp)",
+    )
+    parser.add_argument(
+        "--stamp1", type=float, default=None, help="Explicit timestamp for scan1"
+    )
+    parser.add_argument(
+        "--stamp2", type=float, default=None, help="Explicit timestamp for scan2"
+    )
 
     # Indices
-    parser.add_argument("--idx1", type=int, default=0,
-                        help="Index of frame1")
-    parser.add_argument("--idx2", type=int, default=1,
-                        help="Index of frame2")
+    parser.add_argument("--idx1", type=int, default=0, help="Index of frame1")
+    parser.add_argument("--idx2", type=int, default=1, help="Index of frame2")
 
     # GT or manual poses
-    parser.add_argument("--gt_poses", default=None,
-                        help="Ground truth CSV/TXT file")
-    parser.add_argument("--pose1", default=None,
-                        help="Manual pose1: x,y,z,roll,pitch,yaw (degrees)")
-    parser.add_argument("--pose2", default=None,
-                        help="Manual pose2: x,y,z,roll,pitch,yaw (degrees)")
-    parser.add_argument("--use_gt_init", action="store_true",
-                        help="Use GT transform as ICP initialization")
+    parser.add_argument("--gt_poses", default=None, help="Ground truth CSV/TXT file")
+    parser.add_argument(
+        "--pose1", default=None, help="Manual pose1: x,y,z,roll,pitch,yaw (degrees)"
+    )
+    parser.add_argument(
+        "--pose2", default=None, help="Manual pose2: x,y,z,roll,pitch,yaw (degrees)"
+    )
+    parser.add_argument(
+        "--use_gt_init",
+        action="store_true",
+        help="Use GT transform as ICP initialization",
+    )
 
     # Processing
-    parser.add_argument("--voxel_size", type=float, default=0.1,
-                        help="Voxel size (default: 0.1 m)")
-    parser.add_argument("--icp_max_dist", type=float, default=2.0,
-                        help="ICP max correspondence distance (default: 2.0 m)")
-    parser.add_argument("--overlap_radius", type=float, default=1.0,
-                        help="Radius for overlap check (default: 1.0 m)")
-    parser.add_argument("--overlap_threshold", type=float, default=0.30,
-                        help="Overlap threshold used for labeling (default: 0.30)")
+    parser.add_argument(
+        "--voxel_size", type=float, default=0.1, help="Voxel size (default: 0.1 m)"
+    )
+    parser.add_argument(
+        "--icp_max_dist",
+        type=float,
+        default=2.0,
+        help="ICP max correspondence distance (default: 2.0 m)",
+    )
+    parser.add_argument(
+        "--overlap_radius",
+        type=float,
+        default=1.0,
+        help="Radius for overlap check (default: 1.0 m)",
+    )
+    parser.add_argument(
+        "--overlap_threshold",
+        type=float,
+        default=0.30,
+        help="Overlap threshold used for labeling (default: 0.30)",
+    )
     # parser.add_argument("--method", choices=["point2point", "point2plane", "gicp", "all"],
     #                     default="all", help="Registration method")
-    parser.add_argument("--method", choices=["point2point", "point2plane", "gicp", "fpfh", "all"],
-                        default="all", help="Registration method")
-    parser.add_argument("--plot_fpfh", action="store_true",
-                        help="Plot FPFH descriptor bins for selected scan points")
-    parser.add_argument("--fpfh_point_idx1", type=int, default=0,
-                        help="Point index for FPFH plotting in scan 1")
-    parser.add_argument("--fpfh_point_idx2", type=int, default=100,
-                        help="Point index for FPFH plotting in scan 2")
-    parser.add_argument("--savefpfhcorr", action="store_true",
-                        help="Save raw and verified FPFH correspondences")
-    parser.add_argument("--plotfpfhcorr", action="store_true",
-                        help="Plot 2D FPFH correspondences and residual histogram")
-    parser.add_argument("--corrmaxdraw", type=int, default=None,
-                        help="Maximum number of correspondences to draw")
-    parser.add_argument("--corrresidual", type=float, default=1.0,
-                        help="Residual threshold for geometric consistency")
-    parser.add_argument("--corrprefix", default="fpfh_corr",
-                        help="Prefix for saved FPFH correspondence files")
-    
-    parser.add_argument("--plotfpfhgood", action="store_true",
-                    help="Plot only geometrically consistent FPFH correspondences in 2D")
+    parser.add_argument(
+        "--method",
+        choices=["point2point", "point2plane", "gicp", "fpfh", "all"],
+        default="all",
+        help="Registration method",
+    )
+    parser.add_argument(
+        "--plot_fpfh",
+        action="store_true",
+        help="Plot FPFH descriptor bins for selected scan points",
+    )
+    parser.add_argument(
+        "--fpfh_point_idx1",
+        type=int,
+        default=0,
+        help="Point index for FPFH plotting in scan 1",
+    )
+    parser.add_argument(
+        "--fpfh_point_idx2",
+        type=int,
+        default=100,
+        help="Point index for FPFH plotting in scan 2",
+    )
+    parser.add_argument(
+        "--savefpfhcorr",
+        action="store_true",
+        help="Save raw and verified FPFH correspondences",
+    )
+    parser.add_argument(
+        "--plotfpfhcorr",
+        action="store_true",
+        help="Plot 2D FPFH correspondences and residual histogram",
+    )
+    parser.add_argument(
+        "--corrmaxdraw",
+        type=int,
+        default=None,
+        help="Maximum number of correspondences to draw",
+    )
+    parser.add_argument(
+        "--corrresidual",
+        type=float,
+        default=1.0,
+        help="Residual threshold for geometric consistency",
+    )
+    parser.add_argument(
+        "--corrprefix",
+        default="fpfh_corr",
+        help="Prefix for saved FPFH correspondence files",
+    )
 
-    parser.add_argument("--plotfpfhcolor", action="store_true",
-                        help="Plot FPFH correspondences in 2D colored by residual")
+    parser.add_argument(
+        "--plotfpfhgood",
+        action="store_true",
+        help="Plot only geometrically consistent FPFH correspondences in 2D",
+    )
 
-    parser.add_argument("--corrmaxdrawcolor", type=int, default=None,
-                        help="Maximum number of residual-colored correspondences to draw")
+    parser.add_argument(
+        "--plotfpfhcolor",
+        action="store_true",
+        help="Plot FPFH correspondences in 2D colored by residual",
+    )
+
+    parser.add_argument(
+        "--corrmaxdrawcolor",
+        type=int,
+        default=None,
+        help="Maximum number of residual-colored correspondences to draw",
+    )
 
     # Output
-    parser.add_argument("--no_vis", action="store_true",
-                        help="Skip visualization")
-    parser.add_argument("--save_plots", action="store_true",
-                        help="Save matplotlib plots")
-    parser.add_argument("--save_pose", action="store_true",
-                        help="Save best estimated source->target transform")
-    parser.add_argument("--save_pose_name", default="estimated_relative_pose.txt",
-                        help="Output filename for saved pose")
+    parser.add_argument("--no_vis", action="store_true", help="Skip visualization")
+    parser.add_argument(
+        "--save_plots", action="store_true", help="Save matplotlib plots"
+    )
+    parser.add_argument(
+        "--save_pose",
+        action="store_true",
+        help="Save best estimated source->target transform",
+    )
+    parser.add_argument(
+        "--save_pose_name",
+        default="estimated_relative_pose.txt",
+        help="Output filename for saved pose",
+    )
 
     args = parser.parse_args()
     validate_inputs(args)
@@ -2206,11 +2433,13 @@ def main():
     matched_gt_idx2 = None
 
     if args.pose1 and args.pose2:
-        vals1 = [float(v) for v in args.pose1.split(',')]
-        vals2 = [float(v) for v in args.pose2.split(',')]
+        vals1 = [float(v) for v in args.pose1.split(",")]
+        vals2 = [float(v) for v in args.pose2.split(",")]
 
         if len(vals1) != 6 or len(vals2) != 6:
-            print("[ERROR] --pose1 and --pose2 must have 6 values: x,y,z,roll,pitch,yaw")
+            print(
+                "[ERROR] --pose1 and --pose2 must have 6 values: x,y,z,roll,pitch,yaw"
+            )
             sys.exit(1)
 
         vals1[3:] = np.radians(vals1[3:]).tolist()
@@ -2240,8 +2469,12 @@ def main():
                 gt_ts2 = gt_rows[matched_gt_idx2]["timestamp"]
 
                 print("  Using timestamp-based GT matching")
-                print(f"  Frame1 -> GT row {matched_gt_idx1}, GT timestamp {gt_ts1:.12f}, |dt| = {abs(frame_ts1 - gt_ts1):.9f}s")
-                print(f"  Frame2 -> GT row {matched_gt_idx2}, GT timestamp {gt_ts2:.12f}, |dt| = {abs(frame_ts2 - gt_ts2):.9f}s")
+                print(
+                    f"  Frame1 -> GT row {matched_gt_idx1}, GT timestamp {gt_ts1:.12f}, |dt| = {abs(frame_ts1 - gt_ts1):.9f}s"
+                )
+                print(
+                    f"  Frame2 -> GT row {matched_gt_idx2}, GT timestamp {gt_ts2:.12f}, |dt| = {abs(frame_ts2 - gt_ts2):.9f}s"
+                )
 
             except Exception as e:
                 print(f"  [WARNING] Timestamp matching failed: {e}")
@@ -2249,7 +2482,7 @@ def main():
 
         if not has_gt:
             if args.idx1 >= len(gt_rows) or args.idx2 >= len(gt_rows):
-                print(f"[ERROR] GT index out of range. Available: 0-{len(gt_rows)-1}")
+                print(f"[ERROR] GT index out of range. Available: 0-{len(gt_rows) - 1}")
                 sys.exit(1)
 
             matched_gt_idx1 = args.idx1
@@ -2258,7 +2491,9 @@ def main():
             T2_world = gt_rows[matched_gt_idx2]["T"]
             has_gt = True
             gt_match_mode = "index"
-            print(f"  Using index-based GT rows {matched_gt_idx1} and {matched_gt_idx2}")
+            print(
+                f"  Using index-based GT rows {matched_gt_idx1} and {matched_gt_idx2}"
+            )
 
     else:
         print("  [WARNING] No GT file and no manual poses provided.")
@@ -2269,14 +2504,18 @@ def main():
         print_transform(T2_world, "Pose of scan2 in world/map frame:")
 
         scan_world_distance = np.linalg.norm(T1_world[:3, 3] - T2_world[:3, 3])
-        print(f"\n  Distance between scan1 and scan2 poses: {scan_world_distance:.4f} m")
+        print(
+            f"\n  Distance between scan1 and scan2 poses: {scan_world_distance:.4f} m"
+        )
 
         # Important:
         # scan1 = target/reference
         # scan2 = source/current
         # GT alignment should map scan2 -> scan1
         T_gt_source_to_target = transform_from_A_to_B(T1_world, T2_world)
-        print_transform(T_gt_source_to_target, "Ground-truth transform (scan2 -> scan1):")
+        print_transform(
+            T_gt_source_to_target, "Ground-truth transform (scan2 -> scan1):"
+        )
 
     # --------------------------------------------------------
     # [3] Preprocess
@@ -2304,7 +2543,7 @@ def main():
         point_idx=args.fpfh_point_idx1,
         prefix=prefix1,
         save=True,
-        show=True
+        show=True,
     )
 
     plot_fpfh_bins_exact(
@@ -2313,7 +2552,7 @@ def main():
         point_idx=args.fpfh_point_idx2,
         prefix=prefix2,
         save=True,
-        show=True
+        show=True,
     )
     # --------------------------------------------------------
     # [4] Overlap
@@ -2322,21 +2561,22 @@ def main():
 
     if has_gt:
         overlap_gt = check_overlap(
-            scan1_proc, scan2_proc,
+            scan1_proc,
+            scan2_proc,
             T_gt_source_to_target,
-            overlap_radius=args.overlap_radius
+            overlap_radius=args.overlap_radius,
         )
         print("  Using GT transform (scan2 -> scan1) for overlap check")
         print(f"  Overlap using GT pose: {overlap_gt:.2%}")
-        print(f"  GT overlap decision:   {overlap_label(overlap_gt, args.overlap_threshold)}")
+        print(
+            f"  GT overlap decision:   {overlap_label(overlap_gt, args.overlap_threshold)}"
+        )
 
         T_init = T_gt_source_to_target if args.use_gt_init else np.eye(4)
         init_name = "ground truth" if args.use_gt_init else "identity"
 
         overlap_init = check_overlap(
-            scan1_proc, scan2_proc,
-            T_init,
-            overlap_radius=args.overlap_radius
+            scan1_proc, scan2_proc, T_init, overlap_radius=args.overlap_radius
         )
         print(f"  ICP initialization:   {init_name}")
         print(f"  Overlap using init:   {overlap_init:.2%}")
@@ -2344,15 +2584,15 @@ def main():
         overlap_gt = None
         T_init = np.eye(4)
         overlap_init = check_overlap(
-            scan1_proc, scan2_proc,
-            T_init,
-            overlap_radius=args.overlap_radius
+            scan1_proc, scan2_proc, T_init, overlap_radius=args.overlap_radius
         )
         print("  No GT available, using identity initialization")
         print(f"  Overlap using init:   {overlap_init:.2%}")
 
     if has_gt and overlap_gt < args.overlap_threshold:
-        print("  [WARNING] GT says this pair has weak overlap. Registration may fail even if code is correct.")
+        print(
+            "  [WARNING] GT says this pair has weak overlap. Registration may fail even if code is correct."
+        )
     elif overlap_init < args.overlap_threshold:
         print("  [WARNING] Initialization overlap is weak. ICP may be unreliable.")
     else:
@@ -2369,10 +2609,10 @@ def main():
     #     "gicp":        ("Generalized ICP",    run_generalized_icp),
     # }
     methods = {
-    "point2point": ("Point-to-Point ICP", run_icp_point_to_point),
-    "point2plane": ("Point-to-Plane ICP", run_icp_point_to_plane),
-    "gicp":        ("Generalized ICP",    run_generalized_icp),
-    "fpfh":        ("FPFH + RANSAC + ICP", run_fpfh_ransac_icp),
+        "point2point": ("Point-to-Point ICP", run_icp_point_to_point),
+        "point2plane": ("Point-to-Plane ICP", run_icp_point_to_plane),
+        "gicp": ("Generalized ICP", run_generalized_icp),
+        "fpfh": ("FPFH + RANSAC + ICP", run_fpfh_ransac_icp),
     }
     to_run = methods if args.method == "all" else {args.method: methods[args.method]}
     reg_total_start = time.time()
@@ -2420,7 +2660,7 @@ def main():
     #     if result.fitness > best_fitness:
     #         best_fitness = result.fitness
     #         best_key = key
-    
+
     # --------------------------------------------------------
     # [6] Summary
     # --------------------------------------------------------
@@ -2476,31 +2716,35 @@ def main():
 
     for key, (name, func) in to_run.items():
         print(f"\n  --- {name} ---")
-        src = copy.deepcopy(scan2_proc)   # source/current
-        tgt = copy.deepcopy(scan1_proc)   # target/reference
+        src = copy.deepcopy(scan2_proc)  # source/current
+        tgt = copy.deepcopy(scan1_proc)  # target/reference
 
         if key == "fpfh":
             result, result_ransac = func(
-                src, tgt,
-                voxel_size=args.voxel_size,
-                max_dist=args.icp_max_dist
+                src, tgt, voxel_size=args.voxel_size, max_dist=args.icp_max_dist
             )
             print(f"    RANSAC fitness:     {result_ransac.fitness:.4f}")
             print(f"    RANSAC inlier RMSE: {result_ransac.inlier_rmse:.4f}")
             print_transform(result_ransac.transformation, "    RANSAC initial pose:")
             corr_data = None
-            if args.savefpfhcorr or args.plotfpfhcorr or args.plotfpfhgood or args.plotfpfhcolor:
+            if (
+                args.savefpfhcorr
+                or args.plotfpfhcorr
+                or args.plotfpfhgood
+                or args.plotfpfhcolor
+            ):
                 corr_data = save_fpfh_correspondences(
-                    src, tgt,
+                    src,
+                    tgt,
                     voxel_size=args.voxel_size,
                     # transform_for_check=result.transformation,
                     # if compared with ground truth instead of estimated transform
-                    transform_for_check = T_gt_source_to_target,
+                    transform_for_check=T_gt_source_to_target,
                     # max_residual=args.icp_max_dist,
                     max_residual=args.corrresidual,
                     mutual_filter=True,
                     # out_prefix=f"fpfh_scan2_to_scan1_idx{args.idx2}_to_{args.idx1}"
-                    out_prefix = args.corrprefix
+                    out_prefix=args.corrprefix,
                 )
             if corr_data is not None:
                 if args.plotfpfhcorr:
@@ -2510,12 +2754,12 @@ def main():
                         corr_data["corr_pairs"],
                         # transform_for_check=result.transformation,
                         # if compared with ground truth instead of estimated transform
-                        transform_for_check = T_gt_source_to_target,
+                        transform_for_check=T_gt_source_to_target,
                         max_draw=args.corrmaxdraw,
                         residual_threshold=args.corrresidual,
                         out_prefix=args.corrprefix,
                         save=args.save_plots,
-                        show=(not args.no_vis)
+                        show=(not args.no_vis),
                     )
 
                 if args.plotfpfhgood:
@@ -2526,7 +2770,7 @@ def main():
                         out_prefix=args.corrprefix,
                         save=args.save_plots,
                         show=(not args.no_vis),
-                        transform_for_check = T_gt_source_to_target
+                        transform_for_check=T_gt_source_to_target,
                     )
 
                 if args.plotfpfhcolor:
@@ -2539,19 +2783,13 @@ def main():
                         save=args.save_plots,
                         show=(not args.no_vis),
                         max_draw=args.corrmaxdrawcolor,
-                        transform_for_check = T_gt_source_to_target
+                        transform_for_check=T_gt_source_to_target,
                     )
         else:
             result = func(src, tgt, init_T=T_init, max_dist=args.icp_max_dist)
             result_ransac = None
 
-    
-    
-
         T_est = result.transformation
-    
-
-
 
         # Re-evaluate consistently in Open3D
         eval_reg = o3d.pipelines.registration.evaluate_registration(
@@ -2561,8 +2799,7 @@ def main():
         rmse = eval_reg.inlier_rmse
 
         overlap_est = check_overlap(
-            scan1_proc, scan2_proc, T_est,
-            overlap_radius=args.overlap_radius
+            scan1_proc, scan2_proc, T_est, overlap_radius=args.overlap_radius
         )
 
         valid = (fitness > 1e-6) and (overlap_est >= args.overlap_threshold)
@@ -2606,10 +2843,9 @@ def main():
         if score > best_score:
             best_score = score
             best_key = key
-    
+
     reg_total_time = time.time() - reg_total_start
     print(f"    Total registration time: {reg_total_time:.8f} s")
-
 
     print("\n" + "=" * 78)
     print("RESULTS SUMMARY")
@@ -2621,12 +2857,18 @@ def main():
     if has_gt:
         print(f"  GT matching mode: {gt_match_mode}")
         if gt_match_mode == "timestamp":
-            print(f"  Matched GT rows: scan1->{matched_gt_idx1}, scan2->{matched_gt_idx2}")
+            print(
+                f"  Matched GT rows: scan1->{matched_gt_idx1}, scan2->{matched_gt_idx2}"
+            )
         print(f"  Overlap before ICP (GT pose):   {overlap_gt:.2%}")
         print(f"  Overlap before ICP (init pose): {overlap_init:.2%}")
-        print(f"  GT overlap label: {overlap_label(overlap_gt, args.overlap_threshold)}")
+        print(
+            f"  GT overlap label: {overlap_label(overlap_gt, args.overlap_threshold)}"
+        )
 
-        print(f"\n  {'Method':<25} {'Valid':<8} {'Trans Err(m)':<14} {'Rot Err(deg)':<14} {'Fitness':<10} {'RMSE':<10} {'Overlap':<10}")
+        print(
+            f"\n  {'Method':<25} {'Valid':<8} {'Trans Err(m)':<14} {'Rot Err(deg)':<14} {'Fitness':<10} {'RMSE':<10} {'Overlap':<10}"
+        )
         print("  " + "-" * 108)
         for key, r in results.items():
             tag = " * best" if key == best_key else ""
@@ -2642,7 +2884,9 @@ def main():
     else:
         print(f"  Overlap before ICP (init pose): {overlap_init:.2%}")
 
-        print(f"\n  {'Method':<25} {'Valid':<8} {'Fitness':<10} {'RMSE':<10} {'Overlap':<10}")
+        print(
+            f"\n  {'Method':<25} {'Valid':<8} {'Fitness':<10} {'RMSE':<10} {'Overlap':<10}"
+        )
         print("  " + "-" * 78)
         for key, r in results.items():
             tag = " * best" if key == best_key else ""
@@ -2655,7 +2899,9 @@ def main():
             )
 
     if best_key is None or results[best_key]["score"] <= -1e17:
-        print("\n  [ERROR] No valid registration result passed the overlap/fitness gate.")
+        print(
+            "\n  [ERROR] No valid registration result passed the overlap/fitness gate."
+        )
         best_T = None
     else:
         best_T = results[best_key]["transform"]
@@ -2663,10 +2909,16 @@ def main():
         print_transform(best_T, "  Best estimated transform (scan2 -> scan1):")
 
         if has_gt:
-            print_transform(T_gt_source_to_target, "  Ground truth transform (scan2 -> scan1):")
-            print(f"\n  Overlap after ESTIMATED alignment:    {results[best_key]['overlap_est']:.2%}")
+            print_transform(
+                T_gt_source_to_target, "  Ground truth transform (scan2 -> scan1):"
+            )
+            print(
+                f"\n  Overlap after ESTIMATED alignment:    {results[best_key]['overlap_est']:.2%}"
+            )
             print(f"  Overlap after GROUND-TRUTH alignment: {overlap_gt:.2%}")
-            print(f"  Overlap difference (est - gt):        {(results[best_key]['overlap_est'] - overlap_gt):.2%}")
+            print(
+                f"  Overlap difference (est - gt):        {(results[best_key]['overlap_est'] - overlap_gt):.2%}"
+            )
 
     if args.save_pose and best_T is not None:
         np.savetxt(args.save_pose_name, best_T, fmt="%.6f")
@@ -2678,21 +2930,13 @@ def main():
         T_vis_gt = T_gt_source_to_target if has_gt else best_T
 
         visualize_scans_2d(
-            scan1_proc, scan2_proc,
-            best_T, T_vis_gt,
-            save=args.save_plots
+            scan1_proc, scan2_proc, best_T, T_vis_gt, save=args.save_plots
         )
 
-        visualize_scans_3d(
-            scan1_proc, scan2_proc,
-            best_T, T_vis_gt
-        )
+        visualize_scans_3d(scan1_proc, scan2_proc, best_T, T_vis_gt)
 
     print("\nDone.")
 
 
 if __name__ == "__main__":
     main()
-
-
-
