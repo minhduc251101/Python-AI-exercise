@@ -17,9 +17,12 @@ T_est = np.loadtxt('/media/minhduc/TOSHIBA EXT1/C++ hoc/Python-AI-exercise/resul
 # T_est = np.loadtxt('/media/minhduc/TOSHIBA EXT1/C++ hoc/Python-AI-exercise/results_27_5032/go_icp_output.txt')
 
 trans_error, rot_error_deg = pose_error(T_est, T_gt)
+T_err = T_gt @ np.linalg.inv(T_est)
 print("\n\nFPFH + RANSAC:\n\n")
 # print("\n\nGO-ICP:\n\n")
 print("T_gt =\n", T_gt)
 print("T_est =\n", T_est)
 print("translation error =", trans_error)
 print("rotation error (deg) =", rot_error_deg)
+print("\n Another method for rotation error (deg) =", np.degrees(abs(np.arccos(
+        np.clip((np.trace(T_err[:3,:3]) - 1.0) / 2.0, -1.0, 1.0)))))

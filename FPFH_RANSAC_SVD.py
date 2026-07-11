@@ -1163,42 +1163,38 @@ def pose_xy_yaw_to_T(x, y, yaw, z=0.0, degrees=False):
 
 def parse_gt_row(values):
     n = len(values)
-
-    if n == 8:
-        ts = values[0]
-        T = pose_xyz_quat_to_T(*values[1:8])
-        return ts, T
-
-    if n == 7:
-        if is_unix_timestamp(values[0]):
+    match n:
+        case 8:
+            ts = values[0]
+            T = pose_xyz_quat_to_T(*values[1:8])
+            return ts, T
+    #  if n == 8:
+    #     ts = values[0]
+    #     T = pose_xyz_quat_to_T(*values[1:8])
+    #     return ts, T
+        case 7:
             ts = values[0]
             T = pose_xyz_rpy_to_T(*values[1:7], degrees=False)
             return ts, T
-        else:
-            T = pose_xyz_quat_to_T(*values[:7])
+        case 6:
+            T = pose_xyz_rpy_to_T(*values[:6], degrees=False)
             return None, T
-
-    if n == 6:
-        T = pose_xyz_rpy_to_T(*values[:6], degrees=False)
-        return None, T
-
-    if n == 5 and is_unix_timestamp(values[0]):
-        ts = values[0]
-        T = pose_xy_yaw_to_T(values[1], values[2], values[4], z=values[3], degrees=False)
-        return ts, T
-
-    if n == 4:
-        if is_unix_timestamp(values[0]):
-            ts = values[0]
-            T = pose_xy_yaw_to_T(values[1], values[2], values[3], z=0.0, degrees=False)
-            return ts, T
-        else:
-            T = pose_xy_yaw_to_T(values[0], values[1], values[3], z=values[2], degrees=False)
-            return None, T
-
-    if n == 3:
-        T = pose_xy_yaw_to_T(values[0], values[1], values[2], z=0.0, degrees=False)
-        return None, T
+        case 5:
+            if is_unix_timestamp(values[0]):
+                ts = values[0]
+                T = pose_xy_yaw_to_T(values[1], values[2], values[4], z=values[3], degrees=False)
+                return ts, T
+        case 4:
+            if is_unix_timestamp(values[0]):
+                ts = values[0]
+                T = pose_xy_yaw_to_T(values[1], values[2], values[3], z=0.0, degrees=False)
+                return ts, T
+            else:
+                T = pose_xy_yaw_to_T(values[0], values[1], values[3], z=values[2], degrees=False)
+                return None, T
+        case 3:
+            T = pose_xy_yaw_to_T(values[0], values[1], values[2], z=0.0, degrees=False)
+            Return None, T
 
     raise ValueError(f"Unsupported pose row with {n} numeric values: {values}")
 
@@ -1291,8 +1287,10 @@ def preprocess_for_fpfh(pcd, voxel_size=0.1, normal_radius=None, feature_radius=
         return pcd_down, None
 
     if normal_radius is None:
+         # Tang tu 2.0 len 7.0 do radar du lieu bi thua, FPFH càng nhìn rộng, nó càng ít bị nhầm lẫn bởi các điểm nhiễu lân cận.
         normal_radius = voxel_size * 2.0
     if feature_radius is None:
+        # Tang tu 5.0 len 10.0 do radar du lieu bi thua, FPFH càng nhìn rộng, nó càng ít bị nhầm lẫn bởi các điểm nhiễu lân cận.
         feature_radius = voxel_size * 5.0
 
     pcd_down.estimate_normals(
@@ -1456,8 +1454,9 @@ def run_fpfh_ransac_open3d_then_arun(source, target,
     """
 
     if distance_threshold is None:
+        #increased a bit
         distance_threshold = voxel_size * 3.0
-
+        # distance_threshold = voxel_size * 4.0
     source_down, source_fpfh = preprocess_for_fpfh(
         source,
         voxel_size=voxel_size,
@@ -1883,6 +1882,12 @@ def main():
     T_est = result["transformation"]
     R_est = result["R"]
     t_est = result["t"]
+    # Ransac only result 
+    T_ransac = result["ransac_transformation"]
+    R_ransac = T_ransac[:3, :3]
+    t_ransac = T_ransac[:3, 3]
+
+
 
     # print("\n[4] Estimated final transform")
     # print(f"  Num correspondences (Open3D result): {len(result['corr_pairs'])}")
@@ -1944,6 +1949,9 @@ def main():
     # [6] Save
     # --------------------------------------------------------
     print("\n[6] Saving outputs...")
+    np.savetxt(os.path.join(args.result_dir, "ransac_R_open3d.txt"), R_ransac, fmt="%.10f")
+    np.savetxt(os.path.join(args.result_dir, "ransac_t_open3d.txt"), t_ransac.reshape(1, 3), fmt="%.10f")
+    # np.savetxt(os.path.join(args.result_dir, "ransac_transform_open3d.txt"),result["ransac_transformation"],fmt="%.10f")
     np.savetxt(os.path.join(args.result_dir, "estimated_transform_final.txt"), T_est, fmt="%.10f")
     np.savetxt(os.path.join(args.result_dir, "estimated_R_final.txt"), R_est, fmt="%.10f")
     np.savetxt(os.path.join(args.result_dir, "estimated_t_final.txt"), t_est.reshape(1, 3), fmt="%.10f")
@@ -1986,6 +1994,19 @@ def main():
     # --------------------------------------------------------
     # [7] Optional plot
     # --------------------------------------------------------
+
+    if args.plot_result:
+        print("\n[7] Plotting RANSAC-only result...")
+        save_path_ransac = os.path.join(args.result_dir, "alignment_ransac_only.png") if args.plot_save else None
+        plot_result_2d(
+        scan1=result["target_down"],
+        scan2=result["source_down"],
+        T_est=result["ransac_transformation"],
+        # T_gt=None,
+        T_gt = T_gt_source_to_target,
+        save_path=save_path_ransac,
+        show=args.plot_show
+        )
     if args.plot_result:
         print("\n[7] Plotting final result...")
         save_path = os.path.join(args.result_dir, "final_alignment.png") if args.plot_save else None
