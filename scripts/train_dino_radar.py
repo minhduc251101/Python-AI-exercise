@@ -24,34 +24,31 @@ class RadarDINODataset(Dataset):
     def __len__(self):
         return len(self.files)
 
+    def pad_or_sample(self, pts, num_points=1024):
+        if pts.shape[0] < num_points:
+            padded = np.zeros((num_points, 5))
+            padded[:pts.shape[0], :] = pts
+            return padded
+        else:
+            indices = np.random.choice(pts.shape[0], num_points, replace=False)
+            return pts[indices]
+
     def __getitem__(self, idx):
         # Load raw [x, y, z, rcs, doppler] (N, 5) array
         # Note: Set ran_rename_script=False if the PCD fields haven't been renamed
-        raw_points = load_radar_pcd_to_numpy(self.files[idx], ran_rename_script=True)
-        
-        # Pad or sample points so a batch has constant size (e.g. 1024 points)
-        num_points = 1024
-        if raw_points.shape[0] < num_points:
-            # Pad
-            padded = np.zeros((num_points, 5))
-            padded[:raw_points.shape[0], :] = raw_points
-            raw_points = padded
-        else:
-            # Random uniform sample
-            indices = np.random.choice(raw_points.shape[0], num_points, replace=False)
-            raw_points = raw_points[indices]
+        raw_points = load_radar_pcd_to_numpy(self.files[idx], ran_rename_script=False)
             
         if not self.is_training:
-            return torch.tensor(raw_points, dtype=torch.float32)
+            return torch.tensor(self.pad_or_sample(raw_points), dtype=torch.float32)
             
         # --- DINO MULTI-CROP ---
         # Teacher only gets 2 global views
-        v_teacher_1 = self.teacher_aug.augment_pipeline(raw_points)
-        v_teacher_2 = self.teacher_aug.augment_pipeline(raw_points)
+        v_teacher_1 = self.pad_or_sample(self.teacher_aug.augment_pipeline(raw_points))
+        v_teacher_2 = self.pad_or_sample(self.teacher_aug.augment_pipeline(raw_points))
         
         # Student gets global views AND heavy local views
-        v_student_1 = self.student_aug.augment_pipeline(raw_points)
-        v_student_2 = self.student_aug.augment_pipeline(raw_points)
+        v_student_1 = self.pad_or_sample(self.student_aug.augment_pipeline(raw_points))
+        v_student_2 = self.pad_or_sample(self.student_aug.augment_pipeline(raw_points))
         # Note: For full DINO, you'd add 4-6 more heavy "local" crops (dropping 50% points etc.)
         
         return {
