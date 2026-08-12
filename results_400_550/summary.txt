@@ -1,0 +1,16 @@
+target_scan=/media/minhduc/TOSHIBA EXT1/4dradarslam/NTU4Dradlm/cp/cp/loop_true_fullpose/000400/cloud.pcd
+source_scan=/media/minhduc/TOSHIBA EXT1/4dradarslam/NTU4Dradlm/cp/cp/loop_true_fullpose/000550/cloud.pcd
+target_gt_row=382
+source_gt_row=507
+yaw_only=False
+num_correspondences=1467
+ransac_fitness=0.2423992069
+ransac_inlier_rmse=0.1002990245
+final_num_inliers=1467
+final_inlier_ratio=1.0000000000
+final_rmse=0.1002990245
+translation_error_m=0.3700532881
+rotation_error_deg=0.7777201971
+ransac_num_inliers_eval=1467
+ransac_eval_rmse=0.1002990245
+refine_mode=open3d_only
