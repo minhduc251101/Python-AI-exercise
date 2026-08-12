@@ -361,7 +361,6 @@
 #     return pcd_down, fpfh
 
 
-
 # # def arun_svd_transform(src_pts, tgt_pts):
 # #     assert src_pts.shape == tgt_pts.shape
 # #     assert src_pts.shape[0] >= 3
@@ -448,7 +447,7 @@
 
 #     # rotation estimation - ÉP VỀ 2D (Yaw) ĐỂ RANSAC KHÔNG THỂ LẬT TRỤC Z CỦA RADAR
 #     H = A_prime[:2, :] @ B_prime[:2, :].T
-    
+
 #     U, S, V_transpose = np.linalg.svd(H)
 #     V = V_transpose.T
 #     U_transpose = U.T
@@ -472,7 +471,6 @@
 #     T[:3, 3:4] = t
 
 #     return T, R, t
-
 
 
 # def build_mutual_fpfh_correspondences(source_fpfh, target_fpfh):
@@ -621,7 +619,7 @@
 #     final_tgt = tgt_corr_pts[best_inlier_mask]
 
 #     T_final, R_final, t_final = arun(final_src.T, final_tgt.T)
-    
+
 #     # ---> ĐOẠN CODE BỔ SUNG: Rotoation cuối cùng cũng bị lật thì trả về best_T trước đó <---
 #     if R_final[2, 2] < 0.0:
 #         T_final = best_T
@@ -1009,10 +1007,13 @@ from scipy.spatial.transform import Rotation
 # 1. BASIC HELPERS
 # ============================================================
 
+
 def natural_sort_key(path):
     name = os.path.basename(path)
-    return [int(text) if text.isdigit() else text.lower()
-            for text in re.split(r'(\d+)', name)]
+    return [
+        int(text) if text.isdigit() else text.lower()
+        for text in re.split(r"(\d+)", name)
+    ]
 
 
 def is_unix_timestamp(x):
@@ -1030,7 +1031,7 @@ def load_pcd(filepath):
 
 
 def parse_numeric_tokens(line):
-    tokens = re.split(r'[,\s]+', line.strip())
+    tokens = re.split(r"[,\s]+", line.strip())
     vals = []
     for tok in tokens:
         if tok == "":
@@ -1046,6 +1047,7 @@ def parse_numeric_tokens(line):
 # 2. DATASET LAYOUT: scan_root/000000/{cloud.pcd,data}
 # ============================================================
 
+
 def get_frame_entries(scan_root, scan_name="cloud.pcd", meta_name="data"):
     if not os.path.isdir(scan_root):
         print(f"[ERROR] Scan root not found: {scan_root}")
@@ -1053,7 +1055,7 @@ def get_frame_entries(scan_root, scan_name="cloud.pcd", meta_name="data"):
 
     folders = sorted(
         [d for d in glob.glob(os.path.join(scan_root, "*")) if os.path.isdir(d)],
-        key=natural_sort_key
+        key=natural_sort_key,
     )
 
     entries = []
@@ -1062,12 +1064,14 @@ def get_frame_entries(scan_root, scan_name="cloud.pcd", meta_name="data"):
         meta_path = os.path.join(folder, meta_name)
 
         if os.path.exists(scan_path):
-            entries.append({
-                "folder": folder,
-                "frame_name": os.path.basename(folder),
-                "scan_path": scan_path,
-                "meta_path": meta_path if os.path.exists(meta_path) else None
-            })
+            entries.append(
+                {
+                    "folder": folder,
+                    "frame_name": os.path.basename(folder),
+                    "scan_path": scan_path,
+                    "meta_path": meta_path if os.path.exists(meta_path) else None,
+                }
+            )
 
     if len(entries) == 0:
         print(f"[ERROR] No frame folders containing {scan_name} found in: {scan_root}")
@@ -1077,17 +1081,22 @@ def get_frame_entries(scan_root, scan_name="cloud.pcd", meta_name="data"):
 
 
 def load_scan_from_entries(entries, idx):
-    if idx < 0 or idx >= len(entries):
-        print(f"[ERROR] Frame index out of range. Available: 0-{len(entries)-1}")
-        sys.exit(1)
-
-    entry = entries[idx]
-    return load_pcd(entry["scan_path"]), entry
+    for entry in entries:
+        print(f"  Checking frame: {entry['frame_name']}")
+        frame_name = entry["frame_name"].replace("00", "")
+        print(f"  Frame name after replace: {frame_name}")
+        if int(frame_name) == idx:
+            scan_path = entry["scan_path"]
+            print(f"  Loading scan for frame index {idx}: {scan_path}")
+            return load_pcd(scan_path), entry
+        continue
+    raise ValueError(f"Frame index {idx} not found in entries.")
 
 
 # ============================================================
 # 3. TIMESTAMP PARSING
 # ============================================================
+
 
 def read_text_file(filepath):
     if filepath is None or not os.path.exists(filepath):
@@ -1100,21 +1109,21 @@ def extract_timestamp_from_text(text):
     if not text:
         return None
 
-    m = re.search(r'(?:timestamp|stamp)\D+(\d{10})\D+(\d{1,9})', text, re.IGNORECASE)
+    m = re.search(r"(?:timestamp|stamp)\D+(\d{10})\D+(\d{1,9})", text, re.IGNORECASE)
     if m:
         sec = int(m.group(1))
         nsec = int(m.group(2))
         return sec + nsec * 1e-9
 
-    m = re.search(r'(?:timestamp|stamp)\D+(\d{10}\.\d+)', text, re.IGNORECASE)
+    m = re.search(r"(?:timestamp|stamp)\D+(\d{10}\.\d+)", text, re.IGNORECASE)
     if m:
         return float(m.group(1))
 
-    m = re.search(r'(\d{10}\.\d+)', text)
+    m = re.search(r"(\d{10}\.\d+)", text)
     if m:
         return float(m.group(1))
 
-    m = re.search(r'(\d{10})\s+(\d{1,9})', text)
+    m = re.search(r"(\d{10})\s+(\d{1,9})", text)
     if m:
         sec = int(m.group(1))
         nsec = int(m.group(2))
@@ -1140,6 +1149,7 @@ def read_frame_timestamp(meta_path):
 # 4. POSE PARSING
 # ============================================================
 
+
 def pose_xyz_quat_to_T(x, y, z, qx, qy, qz, qw):
     T = np.eye(4)
     T[:3, 3] = [x, y, z]
@@ -1150,14 +1160,16 @@ def pose_xyz_quat_to_T(x, y, z, qx, qy, qz, qw):
 def pose_xyz_rpy_to_T(x, y, z, roll, pitch, yaw, degrees=False):
     T = np.eye(4)
     T[:3, 3] = [x, y, z]
-    T[:3, :3] = Rotation.from_euler('xyz', [roll, pitch, yaw], degrees=degrees).as_matrix()
+    T[:3, :3] = Rotation.from_euler(
+        "xyz", [roll, pitch, yaw], degrees=degrees
+    ).as_matrix()
     return T
 
 
 def pose_xy_yaw_to_T(x, y, yaw, z=0.0, degrees=False):
     T = np.eye(4)
     T[:3, 3] = [x, y, z]
-    T[:3, :3] = Rotation.from_euler('z', yaw, degrees=degrees).as_matrix()
+    T[:3, :3] = Rotation.from_euler("z", yaw, degrees=degrees).as_matrix()
     return T
 
 
@@ -1168,16 +1180,43 @@ def parse_gt_row(values):
             ts = values[0]
             T = pose_xyz_quat_to_T(*values[1:8])
             return ts, T
+<<<<<<< HEAD
     #  if n == 8:
     #     ts = values[0]
     #     T = pose_xyz_quat_to_T(*values[1:8])
     #     return ts, T
         case 7:
+=======
+        else:
+            T = pose_xyz_quat_to_T(*values[:7])
+            return None, T
+
+    if n == 6:
+        T = pose_xyz_rpy_to_T(*values[:6], degrees=False)
+        return None, T
+
+    if n == 5 and is_unix_timestamp(values[0]):
+        ts = values[0]
+        T = pose_xy_yaw_to_T(
+            values[1], values[2], values[4], z=values[3], degrees=False
+        )
+        return ts, T
+
+    if n == 4:
+        if is_unix_timestamp(values[0]):
+>>>>>>> f7306eecd5ea669edebd8fb6d2ec260d9d067a16
             ts = values[0]
             T = pose_xyz_rpy_to_T(*values[1:7], degrees=False)
             return ts, T
+<<<<<<< HEAD
         case 6:
             T = pose_xyz_rpy_to_T(*values[:6], degrees=False)
+=======
+        else:
+            T = pose_xy_yaw_to_T(
+                values[0], values[1], values[3], z=values[2], degrees=False
+            )
+>>>>>>> f7306eecd5ea669edebd8fb6d2ec260d9d067a16
             return None, T
         case 5:
             if is_unix_timestamp(values[0]):
@@ -1217,11 +1256,7 @@ def load_ground_truth(filepath):
 
             try:
                 ts, T = parse_gt_row(vals)
-                rows.append({
-                    "timestamp": ts,
-                    "T": T,
-                    "raw": vals
-                })
+                rows.append({"timestamp": ts, "T": T, "raw": vals})
             except Exception:
                 continue
 
@@ -1230,19 +1265,22 @@ def load_ground_truth(filepath):
         sys.exit(1)
 
     n_with_ts = sum(r["timestamp"] is not None for r in rows)
-    print(f"  Loaded {len(rows)} ground truth poses from {filepath} ({n_with_ts} rows have timestamps)")
+    print(
+        f"  Loaded {len(rows)} ground truth poses from {filepath} ({n_with_ts} rows have timestamps)"
+    )
     return rows
 
 
 def nearest_gt_index(frame_ts, gt_rows):
-    gt_timestamps = np.array([
-        np.nan if r["timestamp"] is None else float(r["timestamp"])
-        for r in gt_rows
-    ])
+    gt_timestamps = np.array(
+        [np.nan if r["timestamp"] is None else float(r["timestamp"]) for r in gt_rows]
+    )
 
     valid = np.where(~np.isnan(gt_timestamps))[0]
     if len(valid) == 0:
-        raise ValueError("GT file has no timestamps; cannot do timestamp-based matching.")
+        raise ValueError(
+            "GT file has no timestamps; cannot do timestamp-based matching."
+        )
 
     best = valid[np.argmin(np.abs(gt_timestamps[valid] - frame_ts))]
     return int(best)
@@ -1252,18 +1290,21 @@ def nearest_gt_index(frame_ts, gt_rows):
 # 5. TRANSFORMS / ERRORS
 # ============================================================
 
+
 def transform_from_A_to_B(T_A_world, T_B_world):
     return np.linalg.inv(T_A_world) @ T_B_world
 
 
 def print_transform(T, label=""):
     t = T[:3, 3]
-    r = Rotation.from_matrix(T[:3, :3]).as_euler('xyz', degrees=True)
+    r = Rotation.from_matrix(T[:3, :3]).as_euler("xyz", degrees=True)
     dist = np.linalg.norm(t)
 
     print(f"  {label}")
     print(f"    Translation: [{t[0]:.4f}, {t[1]:.4f}, {t[2]:.4f}] (dist: {dist:.4f} m)")
-    print(f"    Rotation:    [{r[0]:.2f}, {r[1]:.2f}, {r[2]:.2f}] deg (roll, pitch, yaw)")
+    print(
+        f"    Rotation:    [{r[0]:.2f}, {r[1]:.2f}, {r[2]:.2f}] deg (roll, pitch, yaw)"
+    )
 
 
 def pose_error(T_est, T_gt):
@@ -1279,8 +1320,15 @@ def pose_error(T_est, T_gt):
 # 6. FPFH + Open3D RANSAC + FINAL ARUN
 # ============================================================
 
-def preprocess_for_fpfh(pcd, voxel_size=0.1, normal_radius=None, feature_radius=None,
-                        normal_max_nn=30, feature_max_nn=100):
+
+def preprocess_for_fpfh(
+    pcd,
+    voxel_size=0.1,
+    normal_radius=None,
+    feature_radius=None,
+    normal_max_nn=30,
+    feature_max_nn=100,
+):
     pcd_down = copy.deepcopy(pcd).voxel_down_sample(voxel_size)
 
     if len(pcd_down.points) == 0:
@@ -1297,11 +1345,13 @@ def preprocess_for_fpfh(pcd, voxel_size=0.1, normal_radius=None, feature_radius=
         o3d.geometry.KDTreeSearchParamHybrid(radius=normal_radius, max_nn=normal_max_nn)
     )
 
-    pcd_down.orient_normals_towards_camera_location(np.array([0.0, 0.0, 0.0]))
+    pcd_down.orient_normals_towards_camera_location(np.zeros(3)) # np.zeros(3))
 
     fpfh = o3d.pipelines.registration.compute_fpfh_feature(
         pcd_down,
-        o3d.geometry.KDTreeSearchParamHybrid(radius=feature_radius, max_nn=feature_max_nn)
+        o3d.geometry.KDTreeSearchParamHybrid(
+            radius=feature_radius, max_nn=feature_max_nn
+        ),
     )
 
     return pcd_down, fpfh
@@ -1394,24 +1444,33 @@ def evaluate_inliers(src_corr_pts, tgt_corr_pts, T, distance_threshold):
     inlier_mask = residuals < distance_threshold
     return inlier_mask, residuals
 
-def is_transform_sane(T, max_translation_norm=10.0,
-                      max_abs_roll_deg=20.0,
-                      max_abs_pitch_deg=20.0):
+
+def is_transform_sane(
+    T, max_translation_norm=10.0, max_abs_roll_deg=20.0, max_abs_pitch_deg=20.0
+):
     t = T[:3, 3]
+    r = T[:3, :3]
+    
     trans_norm = np.linalg.norm(t)
-
-    euler = Rotation.from_matrix(T[:3, :3]).as_euler('xyz', degrees=True)
-    roll, pitch, yaw = euler
-
     if trans_norm > max_translation_norm:
         return False
-    if abs(roll) > max_abs_roll_deg:
+
+    euler = Rotation.from_matrix(r).as_euler("xyz", degrees=True)
+    roll, pitch, yaw = euler
+
+    if abs(roll) > max_abs_roll_deg or abs(pitch) > max_abs_pitch_deg:
         return False
-    if abs(pitch) > max_abs_pitch_deg:
-        return False
+
     return True
-def select_best_inliers(src_corr_pts, tgt_corr_pts, T, distance_threshold,
-                        keep_ratio=0.4, min_keep=20):
+
+
+def select_best_inliers(
+    src_corr_pts, tgt_corr_pts, T, distance_threshold, keep_ratio=0.4, min_keep=20
+):
+    """
+    Filtering inliers based on residuals after applying transformation T.
+    """
+    
     src_tf = (T[:3, :3] @ src_corr_pts.T).T + T[:3, 3]
     residuals = np.linalg.norm(src_tf - tgt_corr_pts, axis=1)
 
@@ -1421,31 +1480,33 @@ def select_best_inliers(src_corr_pts, tgt_corr_pts, T, distance_threshold,
     if len(idx) == 0:
         return np.empty((0,), dtype=int), residuals
 
-    idx_sorted = idx[np.argsort(residuals[idx])]
+    idx_sorted = idx[np.argsort(residuals[idx])] 
 
-    k = max(min_keep, int(np.ceil(keep_ratio * len(idx_sorted))))
-    k = min(k, len(idx_sorted))
+    number_to_keep = min(max(min_keep, int(np.ceil(keep_ratio * len(idx_sorted)))), len(idx_sorted))
 
-    best_idx = idx_sorted[:k]
+    best_idx = idx_sorted[:number_to_keep]
     return best_idx, residuals
 
 
-def run_fpfh_ransac_open3d_then_arun(source, target,
-                                     voxel_size=0.1,
-                                     normal_radius=None,
-                                     feature_radius=None,
-                                     distance_threshold=None,
-                                     max_iterations=50000,
-                                     sample_size=3,
-                                     edge_ratio=0.9,
-                                     yaw_only=False,
-                                     num_trials=20,
-                                     max_translation_norm=5.0,
-                                     max_abs_roll_deg=10.0,
-                                     max_abs_pitch_deg=10.0,
-                                     keep_ratio=0.4,
-                                     min_keep=20,
-                                     min_fitness=0.0):
+def run_fpfh_ransac_open3d_then_arun(
+    source,
+    target,
+    voxel_size=0.1,
+    normal_radius=None,
+    feature_radius=None,
+    distance_threshold=None,
+    max_iterations=50000,
+    sample_size=3,
+    edge_ratio=0.9,
+    yaw_only=False,
+    num_trials=20,
+    max_translation_norm=5.0,
+    max_abs_roll_deg=10.0,
+    max_abs_pitch_deg=10.0,
+    keep_ratio=0.4,
+    min_keep=20,
+    min_fitness=0.0,
+):
     """
     Full pipeline:
         Downsample -> Normals -> FPFH -> Open3D RANSAC (multi-trial)
@@ -1453,8 +1514,12 @@ def run_fpfh_ransac_open3d_then_arun(source, target,
         source -> target
     """
 
+<<<<<<< HEAD
     if distance_threshold is None:
         #increased a bit
+=======
+    if isinstance(distance_threshold, (int, float)):
+>>>>>>> f7306eecd5ea669edebd8fb6d2ec260d9d067a16
         distance_threshold = voxel_size * 3.0
         # distance_threshold = voxel_size * 4.0
     source_down, source_fpfh = preprocess_for_fpfh(
@@ -1491,13 +1556,21 @@ def run_fpfh_ransac_open3d_then_arun(source, target,
             target_fpfh,
             mutual_filter=True,
             max_correspondence_distance=distance_threshold,
-            estimation_method=o3d.pipelines.registration.TransformationEstimationPointToPoint(False),
+            estimation_method=o3d.pipelines.registration.TransformationEstimationPointToPoint(
+                False
+            ),
             ransac_n=sample_size,
             checkers=[
-                o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(edge_ratio),
-                o3d.pipelines.registration.CorrespondenceCheckerBasedOnDistance(distance_threshold),
+                o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(
+                    edge_ratio
+                ),
+                o3d.pipelines.registration.CorrespondenceCheckerBasedOnDistance(
+                    distance_threshold
+                ),
             ],
-            criteria=o3d.pipelines.registration.RANSACConvergenceCriteria(max_iterations, 0.999)
+            criteria=o3d.pipelines.registration.RANSACConvergenceCriteria(
+                max_iterations, 0.999
+            ),
         )
 
         corr_pairs = np.asarray(ransac_result.correspondence_set, dtype=int)
@@ -1515,7 +1588,7 @@ def run_fpfh_ransac_open3d_then_arun(source, target,
             T0,
             max_translation_norm=max_translation_norm,
             max_abs_roll_deg=max_abs_roll_deg,
-            max_abs_pitch_deg=max_abs_pitch_deg
+            max_abs_pitch_deg=max_abs_pitch_deg,
         ):
             continue
 
@@ -1524,19 +1597,21 @@ def run_fpfh_ransac_open3d_then_arun(source, target,
 
         def score_transform(T):
             mask, residuals = evaluate_inliers(
-                src_corr_pts,
-                tgt_corr_pts,
-                T,
-                distance_threshold
+                src_corr_pts, tgt_corr_pts, T, distance_threshold
             )
             num_inliers = int(np.sum(mask))
-            rmse = float(np.sqrt(np.mean(residuals[mask] ** 2))) if np.any(mask) else np.inf
+            rmse = (
+                float(np.sqrt(np.mean(residuals[mask] ** 2)))
+                if np.any(mask)
+                else np.inf
+            )
             return mask, residuals, num_inliers, rmse
 
         # --------------------------------------------------
         # 0) Raw Open3D result
         # --------------------------------------------------
         mask0, residuals0, num0, rmse0 = score_transform(T0)
+
 
         if num0 < sample_size:
             continue
@@ -1559,7 +1634,7 @@ def run_fpfh_ransac_open3d_then_arun(source, target,
             T0,
             distance_threshold=distance_threshold,
             keep_ratio=keep_ratio,
-            min_keep=min_keep
+            min_keep=min_keep,
         )
 
         num_best0 = len(best_idx0)
@@ -1575,7 +1650,7 @@ def run_fpfh_ransac_open3d_then_arun(source, target,
                     T1,
                     max_translation_norm=max_translation_norm,
                     max_abs_roll_deg=max_abs_roll_deg,
-                    max_abs_pitch_deg=max_abs_pitch_deg
+                    max_abs_pitch_deg=max_abs_pitch_deg,
                 ):
                     mask1, residuals1, num1, rmse1 = score_transform(T1)
 
@@ -1600,7 +1675,7 @@ def run_fpfh_ransac_open3d_then_arun(source, target,
             T_final,
             distance_threshold=distance_threshold,
             keep_ratio=keep_ratio,
-            min_keep=min_keep
+            min_keep=min_keep,
         )
 
         num_best1 = len(best_idx1)
@@ -1616,7 +1691,7 @@ def run_fpfh_ransac_open3d_then_arun(source, target,
                     T2,
                     max_translation_norm=max_translation_norm,
                     max_abs_roll_deg=max_abs_roll_deg,
-                    max_abs_pitch_deg=max_abs_pitch_deg
+                    max_abs_pitch_deg=max_abs_pitch_deg,
                 ):
                     mask2, residuals2, num2, rmse2 = score_transform(T2)
 
@@ -1639,7 +1714,7 @@ def run_fpfh_ransac_open3d_then_arun(source, target,
             final_num,
             -final_rmse,
             float(ransac_result.fitness),
-            len(corr_pairs)
+            len(corr_pairs),
         )
 
         candidate = {
@@ -1649,7 +1724,9 @@ def run_fpfh_ransac_open3d_then_arun(source, target,
             "corr_pairs": corr_pairs,
             "inlier_mask": final_mask,
             "num_inliers": final_num,
-            "inlier_ratio": float(final_num) / float(len(corr_pairs)) if len(corr_pairs) > 0 else 0.0,
+            "inlier_ratio": float(final_num) / float(len(corr_pairs))
+            if len(corr_pairs) > 0
+            else 0.0,
             "rmse": final_rmse,
             "residuals": final_residuals,
             "ransac_transformation": T0,
@@ -1663,17 +1740,21 @@ def run_fpfh_ransac_open3d_then_arun(source, target,
             "target_fpfh": target_fpfh,
             "refine_mode": refine_mode,
             "trial_index": trial,
-            "num_best_trimmed": num_best0
+            "num_best_trimmed": num_best0,
         }
 
         if best_result is None or candidate_key > best_key:
             best_result = candidate
             best_key = candidate_key
+            
 
     return best_result
+
+
 # ============================================================
 # 7. OPTIONAL PLOT: FINAL RESULT
 # ============================================================
+
 
 def plot_result_2d(scan1, scan2, T_est, T_gt=None, save_path=None, show=True):
     pts1 = np.asarray(scan1.points)
@@ -1694,27 +1775,29 @@ def plot_result_2d(scan1, scan2, T_est, T_gt=None, save_path=None, show=True):
         ax1, ax2 = axes
         pts2_gt = None
 
-    ax1.scatter(pts1[:, 0], pts1[:, 1], s=1, c='tab:blue', label='Target')
-    ax1.scatter(pts2[:, 0], pts2[:, 1], s=1, c='tab:orange', label='Source')
-    ax1.set_title('Before alignment')
-    ax1.set_aspect('equal')
+    ax1.scatter(pts1[:, 0], pts1[:, 1], s=1, c="tab:blue", label="Target")
+    ax1.scatter(pts2[:, 0], pts2[:, 1], s=1, c="tab:orange", label="Source")
+    ax1.set_title("Before alignment")
+    ax1.set_aspect("equal")
     ax1.grid(True, alpha=0.3)
-    ax1.legend(loc='upper left', markerscale=5)
+    ax1.legend(loc="upper left", markerscale=5)
 
-    ax2.scatter(pts1[:, 0], pts1[:, 1], s=1, c='tab:blue', label='Target')
-    ax2.scatter(pts2_est[:, 0], pts2_est[:, 1], s=1, c='tab:green', label='Final aligned')
-    ax2.set_title('Final alignment')
-    ax2.set_aspect('equal')
+    ax2.scatter(pts1[:, 0], pts1[:, 1], s=1, c="tab:blue", label="Target")
+    ax2.scatter(
+        pts2_est[:, 0], pts2_est[:, 1], s=1, c="tab:green", label="Final aligned"
+    )
+    ax2.set_title("Final alignment")
+    ax2.set_aspect("equal")
     ax2.grid(True, alpha=0.3)
-    ax2.legend(loc='upper left', markerscale=5)
+    ax2.legend(loc="upper left", markerscale=5)
 
     if pts2_gt is not None:
-        ax3.scatter(pts1[:, 0], pts1[:, 1], s=1, c='tab:blue', label='Target')
-        ax3.scatter(pts2_gt[:, 0], pts2_gt[:, 1], s=1, c='tab:red', label='GT aligned')
-        ax3.set_title('GT alignment')
-        ax3.set_aspect('equal')
+        ax3.scatter(pts1[:, 0], pts1[:, 1], s=1, c="tab:blue", label="Target")
+        ax3.scatter(pts2_gt[:, 0], pts2_gt[:, 1], s=1, c="tab:red", label="GT aligned")
+        ax3.set_title("GT alignment")
+        ax3.set_aspect("equal")
         ax3.grid(True, alpha=0.3)
-        ax3.legend(loc='upper left', markerscale=5)
+        ax3.legend(loc="upper left", markerscale=5)
 
     plt.tight_layout()
 
@@ -1733,23 +1816,24 @@ def plot_result_2d(scan1, scan2, T_est, T_gt=None, save_path=None, show=True):
 # 8. MAIN
 # ============================================================
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="FPFH + Open3D RANSAC + final Arun evaluation against GT odom"
     )
 
-    parser.add_argument("--scan_root", required=True,
-                        help="Root folder containing frame folders like 000000/000001/...")
+    parser.add_argument(
+        "--scan_root",
+        required=True,
+        help="Root folder containing frame folders like 000000/000001/...",
+    )
     parser.add_argument("--scan_name", default="cloud.pcd")
     parser.add_argument("--meta_name", default="data")
 
-    parser.add_argument("--idx1", type=int, required=True,
-                        help="Target frame index")
-    parser.add_argument("--idx2", type=int, required=True,
-                        help="Source frame index")
+    parser.add_argument("--idx1", type=int, required=True, help="Target frame index")
+    parser.add_argument("--idx2", type=int, required=True, help="Source frame index")
 
-    parser.add_argument("--gt_poses", required=True,
-                        help="GT odom file")
+    parser.add_argument("--gt_poses", required=True, help="GT odom file")
 
     parser.add_argument("--voxel_size", type=float, default=0.1)
     parser.add_argument("--normal_radius", type=float, default=None)
@@ -1759,8 +1843,11 @@ def main():
     parser.add_argument("--sample_size", type=int, default=3)
     parser.add_argument("--edge_ratio", type=float, default=0.9)
 
-    parser.add_argument("--yaw_only", action="store_true",
-                        help="Use yaw-only Arun refinement (recommended for planar radar)")
+    parser.add_argument(
+        "--yaw_only",
+        action="store_true",
+        help="Use yaw-only Arun refinement (recommended for planar radar)",
+    )
     parser.add_argument("--result_dir", default="results_fpfh_open3d_ransac_then_arun")
     parser.add_argument("--save_pose", action="store_true")
     parser.add_argument("--save_pose_name", default="estimated_transform_final.txt")
@@ -1813,19 +1900,25 @@ def main():
     gt_rows = load_ground_truth(args.gt_poses)
 
     if frame_ts1 is None or frame_ts2 is None:
-        print("[ERROR] Missing timestamps in frame metadata, cannot do timestamp GT matching.")
+        print(
+            "[ERROR] Missing timestamps in frame metadata, cannot do timestamp GT matching."
+        )
         sys.exit(1)
 
     gt_idx1 = nearest_gt_index(frame_ts1, gt_rows)
     gt_idx2 = nearest_gt_index(frame_ts2, gt_rows)
 
-    T1_world = gt_rows[gt_idx1]["T"]   # target pose in world
-    T2_world = gt_rows[gt_idx2]["T"]   # source pose in world
+    T1_world = gt_rows[gt_idx1]["T"]  # target pose in world
+    T2_world = gt_rows[gt_idx2]["T"]  # source pose in world
     gt_ts1 = gt_rows[gt_idx1]["timestamp"]
     gt_ts2 = gt_rows[gt_idx2]["timestamp"]
 
-    print(f"  Frame1 -> GT row {gt_idx1}, GT timestamp {gt_ts1:.12f}, |dt| = {abs(frame_ts1 - gt_ts1):.9f}s")
-    print(f"  Frame2 -> GT row {gt_idx2}, GT timestamp {gt_ts2:.12f}, |dt| = {abs(frame_ts2 - gt_ts2):.9f}s")
+    print(
+        f"  Frame1 -> GT row {gt_idx1}, GT timestamp {gt_ts1:.12f}, |dt| = {abs(frame_ts1 - gt_ts1):.9f}s"
+    )
+    print(
+        f"  Frame2 -> GT row {gt_idx2}, GT timestamp {gt_ts2:.12f}, |dt| = {abs(frame_ts2 - gt_ts2):.9f}s"
+    )
 
     print_transform(T1_world, "Target pose in world:")
     print_transform(T2_world, "Source pose in world:")
@@ -1856,23 +1949,23 @@ def main():
     # )
 
     result = run_fpfh_ransac_open3d_then_arun(
-    source=scan2,
-    target=scan1,
-    voxel_size=args.voxel_size,
-    normal_radius=args.normal_radius,
-    feature_radius=args.feature_radius,
-    distance_threshold=args.distance_threshold,
-    max_iterations=args.max_iterations,
-    sample_size=args.sample_size,
-    edge_ratio=args.edge_ratio,
-    yaw_only=args.yaw_only,
-    num_trials=args.num_trials,
-    max_translation_norm=args.max_translation_norm,
-    max_abs_roll_deg=args.max_abs_roll_deg,
-    max_abs_pitch_deg=args.max_abs_pitch_deg,
-    keep_ratio=args.keep_ratio,
-    min_keep=args.min_keep,
-    min_fitness=args.min_fitness,
+        source=scan2,
+        target=scan1,
+        voxel_size=args.voxel_size,
+        normal_radius=args.normal_radius,
+        feature_radius=args.feature_radius,
+        distance_threshold=args.distance_threshold,
+        max_iterations=args.max_iterations,
+        sample_size=args.sample_size,
+        edge_ratio=args.edge_ratio,
+        yaw_only=args.yaw_only,
+        num_trials=args.num_trials,
+        max_translation_norm=args.max_translation_norm,
+        max_abs_roll_deg=args.max_abs_roll_deg,
+        max_abs_pitch_deg=args.max_abs_pitch_deg,
+        keep_ratio=args.keep_ratio,
+        min_keep=args.min_keep,
+        min_fitness=args.min_fitness,
     )
 
     if result is None:
@@ -1907,9 +2000,9 @@ def main():
     # print(f"  Final inlier ratio:                 {result['inlier_ratio']:.6f}")
     # print(f"  Final RMSE:                         {result['rmse']:.6f}")
     # print_transform(T_est, "Estimated final transform (source -> target):")
-     # [4] Estimated relative and global transform
+    # [4] Estimated relative and global transform
     # --------------------------------------------------------
-  # [4] Estimated relative and global transform
+    # [4] Estimated relative and global transform
     # --------------------------------------------------------
     print("\n[4] Estimated final transform")
     print(f"  Num correspondences (Open3D result): {len(result['corr_pairs'])}")
@@ -1921,7 +2014,6 @@ def main():
     print(f"  Final inlier ratio:                 {result['inlier_ratio']:.6f}")
     print(f"  Final RMSE:                         {result['rmse']:.6f}")
     print_transform(T_est, "Estimated RELATIVE transform (source -> target):")
-
 
     # --------------------------------------------------------
     # [5] Compare with GT
@@ -1935,7 +2027,11 @@ def main():
     print("\n  Estimated final R:")
     print(R_est)
     print("  Estimated final t:")
-    print(t_est.reshape(3,))
+    print(
+        t_est.reshape(
+            3,
+        )
+    )
 
     print("\n  Open3D RANSAC T:")
     print(result["ransac_transformation"])
@@ -1949,20 +2045,54 @@ def main():
     # [6] Save
     # --------------------------------------------------------
     print("\n[6] Saving outputs...")
+<<<<<<< HEAD
     np.savetxt(os.path.join(args.result_dir, "ransac_R_open3d.txt"), R_ransac, fmt="%.10f")
     np.savetxt(os.path.join(args.result_dir, "ransac_t_open3d.txt"), t_ransac.reshape(1, 3), fmt="%.10f")
     # np.savetxt(os.path.join(args.result_dir, "ransac_transform_open3d.txt"),result["ransac_transformation"],fmt="%.10f")
     np.savetxt(os.path.join(args.result_dir, "estimated_transform_final.txt"), T_est, fmt="%.10f")
     np.savetxt(os.path.join(args.result_dir, "estimated_R_final.txt"), R_est, fmt="%.10f")
     np.savetxt(os.path.join(args.result_dir, "estimated_t_final.txt"), t_est.reshape(1, 3), fmt="%.10f")
+=======
+    np.savetxt(
+        os.path.join(args.result_dir, "estimated_transform_final.txt"),
+        T_est,
+        fmt="%.10f",
+    )
+    np.savetxt(
+        os.path.join(args.result_dir, "estimated_R_final.txt"), R_est, fmt="%.10f"
+    )
+    np.savetxt(
+        os.path.join(args.result_dir, "estimated_t_final.txt"),
+        t_est.reshape(1, 3),
+        fmt="%.10f",
+    )
+>>>>>>> f7306eecd5ea669edebd8fb6d2ec260d9d067a16
 
-    np.savetxt(os.path.join(args.result_dir, "ransac_transform_open3d.txt"), result["ransac_transformation"], fmt="%.10f")
-    np.savetxt(os.path.join(args.result_dir, "gt_transform_new.txt"), T_gt_source_to_target, fmt="%.10f")
-    np.savetxt(os.path.join(args.result_dir, "gt_R_new.txt"), T_gt_source_to_target[:3, :3], fmt="%.10f")
-    np.savetxt(os.path.join(args.result_dir, "gt_t_new.txt"), T_gt_source_to_target[:3, 3].reshape(1, 3), fmt="%.10f")
+    np.savetxt(
+        os.path.join(args.result_dir, "ransac_transform_open3d.txt"),
+        result["ransac_transformation"],
+        fmt="%.10f",
+    )
+    np.savetxt(
+        os.path.join(args.result_dir, "gt_transform_new.txt"),
+        T_gt_source_to_target,
+        fmt="%.10f",
+    )
+    np.savetxt(
+        os.path.join(args.result_dir, "gt_R_new.txt"),
+        T_gt_source_to_target[:3, :3],
+        fmt="%.10f",
+    )
+    np.savetxt(
+        os.path.join(args.result_dir, "gt_t_new.txt"),
+        T_gt_source_to_target[:3, 3].reshape(1, 3),
+        fmt="%.10f",
+    )
 
     if args.save_pose:
-        np.savetxt(os.path.join(args.result_dir, args.save_pose_name), T_est, fmt="%.10f")
+        np.savetxt(
+            os.path.join(args.result_dir, args.save_pose_name), T_est, fmt="%.10f"
+        )
 
     with open(os.path.join(args.result_dir, "summary.txt"), "w", encoding="utf-8") as f:
         f.write(f"target_scan={entry1['scan_path']}\n")
@@ -2009,14 +2139,18 @@ def main():
         )
     if args.plot_result:
         print("\n[7] Plotting final result...")
-        save_path = os.path.join(args.result_dir, "final_alignment.png") if args.plot_save else None
+        save_path = (
+            os.path.join(args.result_dir, "final_alignment.png")
+            if args.plot_save
+            else None
+        )
         plot_result_2d(
             scan1=result["target_down"],
             scan2=result["source_down"],
             T_est=T_est,
             T_gt=T_gt_source_to_target,
             save_path=save_path,
-            show=args.plot_show
+            show=args.plot_show,
         )
 
     print("\nDone.")

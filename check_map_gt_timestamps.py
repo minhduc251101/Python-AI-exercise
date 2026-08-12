@@ -4,6 +4,7 @@ import sys
 import argparse
 import numpy as np
 
+
 def inspect_pcd_header(pcd_path, max_lines=30):
     if not os.path.exists(pcd_path):
         print(f"[ERROR] PCD file not found: {pcd_path}")
@@ -42,14 +43,15 @@ def inspect_pcd_header(pcd_path, max_lines=30):
                 print(f"  Parsed FIELDS line: {line}")
                 break
 
+
 def inspect_gt(gt_path):
     if not os.path.exists(gt_path):
         print(f"[ERROR] GT file not found: {gt_path}")
         sys.exit(1)
 
-    for delim in [',', None]:
+    for delim in [",", None]:
         try:
-            data = np.loadtxt(gt_path, delimiter=delim, comments='#')
+            data = np.loadtxt(gt_path, delimiter=delim, comments="#")
             if data.ndim == 1:
                 data = data.reshape(1, -1)
             break
@@ -75,6 +77,7 @@ def inspect_gt(gt_path):
     else:
         print("  Column 0 may be pose data, frame index, or something else.")
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--map", required=True, help="Path to PCD map file")
@@ -90,9 +93,16 @@ def main():
 
     print("\n[INTERPRETATION]")
     print("  - If GT col0 is timestamp-like, GT likely contains timestamps.")
-    print("  - If PCD FIELDS includes something like time/timestamp/t, the PCD may store time info.")
-    print("  - If the map PCD has only x y z (or x y z intensity), it is probably just a fused map.")
-    print("  - In that case, you cannot directly verify 'same timestamps' between map and GT.")
+    print(
+        "  - If PCD FIELDS includes something like time/timestamp/t, the PCD may store time info."
+    )
+    print(
+        "  - If the map PCD has only x y z (or x y z intensity), it is probably just a fused map."
+    )
+    print(
+        "  - In that case, you cannot directly verify 'same timestamps' between map and GT."
+    )
+
 
 if __name__ == "__main__":
     main()

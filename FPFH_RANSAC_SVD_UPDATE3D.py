@@ -30,10 +30,13 @@ from scipy.spatial.transform import Rotation
 # 1. BASIC HELPERS
 # ============================================================
 
+
 def natural_sort_key(path):
     name = os.path.basename(path)
-    return [int(text) if text.isdigit() else text.lower()
-            for text in re.split(r'(\d+)', name)]
+    return [
+        int(text) if text.isdigit() else text.lower()
+        for text in re.split(r"(\d+)", name)
+    ]
 
 
 def is_unix_timestamp(x):
@@ -51,7 +54,7 @@ def load_pcd(filepath):
 
 
 def parse_numeric_tokens(line):
-    tokens = re.split(r'[,\s]+', line.strip())
+    tokens = re.split(r"[,\s]+", line.strip())
     vals = []
     for tok in tokens:
         if tok == "":
@@ -67,6 +70,7 @@ def parse_numeric_tokens(line):
 # 2. DATASET LAYOUT: scan_root/000000/{cloud.pcd,data}
 # ============================================================
 
+
 def get_frame_entries(scan_root, scan_name="cloud.pcd", meta_name="data"):
     if not os.path.isdir(scan_root):
         print(f"[ERROR] Scan root not found: {scan_root}")
@@ -74,7 +78,7 @@ def get_frame_entries(scan_root, scan_name="cloud.pcd", meta_name="data"):
 
     folders = sorted(
         [d for d in glob.glob(os.path.join(scan_root, "*")) if os.path.isdir(d)],
-        key=natural_sort_key
+        key=natural_sort_key,
     )
 
     entries = []
@@ -83,12 +87,14 @@ def get_frame_entries(scan_root, scan_name="cloud.pcd", meta_name="data"):
         meta_path = os.path.join(folder, meta_name)
 
         if os.path.exists(scan_path):
-            entries.append({
-                "folder": folder,
-                "frame_name": os.path.basename(folder),
-                "scan_path": scan_path,
-                "meta_path": meta_path if os.path.exists(meta_path) else None
-            })
+            entries.append(
+                {
+                    "folder": folder,
+                    "frame_name": os.path.basename(folder),
+                    "scan_path": scan_path,
+                    "meta_path": meta_path if os.path.exists(meta_path) else None,
+                }
+            )
 
     if len(entries) == 0:
         print(f"[ERROR] No frame folders containing {scan_name} found in: {scan_root}")
@@ -98,8 +104,10 @@ def get_frame_entries(scan_root, scan_name="cloud.pcd", meta_name="data"):
 
 
 def load_scan_from_entries(entries, idx):
+    print(f"  Loading frame index {idx} from {len(entries)} available frames...")
+
     if idx < 0 or idx >= len(entries):
-        print(f"[ERROR] Frame index out of range. Available: 0-{len(entries)-1}")
+        print(f"[ERROR] Frame index out of range. Available: 0-{len(entries) - 1}")
         sys.exit(1)
 
     entry = entries[idx]
@@ -109,6 +117,7 @@ def load_scan_from_entries(entries, idx):
 # ============================================================
 # 3. TIMESTAMP PARSING
 # ============================================================
+
 
 def read_text_file(filepath):
     if filepath is None or not os.path.exists(filepath):
@@ -121,21 +130,21 @@ def extract_timestamp_from_text(text):
     if not text:
         return None
 
-    m = re.search(r'(?:timestamp|stamp)\D+(\d{10})\D+(\d{1,9})', text, re.IGNORECASE)
+    m = re.search(r"(?:timestamp|stamp)\D+(\d{10})\D+(\d{1,9})", text, re.IGNORECASE)
     if m:
         sec = int(m.group(1))
         nsec = int(m.group(2))
         return sec + nsec * 1e-9
 
-    m = re.search(r'(?:timestamp|stamp)\D+(\d{10}\.\d+)', text, re.IGNORECASE)
+    m = re.search(r"(?:timestamp|stamp)\D+(\d{10}\.\d+)", text, re.IGNORECASE)
     if m:
         return float(m.group(1))
 
-    m = re.search(r'(\d{10}\.\d+)', text)
+    m = re.search(r"(\d{10}\.\d+)", text)
     if m:
         return float(m.group(1))
 
-    m = re.search(r'(\d{10})\s+(\d{1,9})', text)
+    m = re.search(r"(\d{10})\s+(\d{1,9})", text)
     if m:
         sec = int(m.group(1))
         nsec = int(m.group(2))
@@ -161,6 +170,7 @@ def read_frame_timestamp(meta_path):
 # 4. POSE PARSING
 # ============================================================
 
+
 def pose_xyz_quat_to_T(x, y, z, qx, qy, qz, qw):
     T = np.eye(4)
     T[:3, 3] = [x, y, z]
@@ -171,14 +181,16 @@ def pose_xyz_quat_to_T(x, y, z, qx, qy, qz, qw):
 def pose_xyz_rpy_to_T(x, y, z, roll, pitch, yaw, degrees=False):
     T = np.eye(4)
     T[:3, 3] = [x, y, z]
-    T[:3, :3] = Rotation.from_euler('xyz', [roll, pitch, yaw], degrees=degrees).as_matrix()
+    T[:3, :3] = Rotation.from_euler(
+        "xyz", [roll, pitch, yaw], degrees=degrees
+    ).as_matrix()
     return T
 
 
 def pose_xy_yaw_to_T(x, y, yaw, z=0.0, degrees=False):
     T = np.eye(4)
     T[:3, 3] = [x, y, z]
-    T[:3, :3] = Rotation.from_euler('z', yaw, degrees=degrees).as_matrix()
+    T[:3, :3] = Rotation.from_euler("z", yaw, degrees=degrees).as_matrix()
     return T
 
 
@@ -205,7 +217,9 @@ def parse_gt_row(values):
 
     if n == 5 and is_unix_timestamp(values[0]):
         ts = values[0]
-        T = pose_xy_yaw_to_T(values[1], values[2], values[4], z=values[3], degrees=False)
+        T = pose_xy_yaw_to_T(
+            values[1], values[2], values[4], z=values[3], degrees=False
+        )
         return ts, T
 
     if n == 4:
@@ -214,7 +228,9 @@ def parse_gt_row(values):
             T = pose_xy_yaw_to_T(values[1], values[2], values[3], z=0.0, degrees=False)
             return ts, T
         else:
-            T = pose_xy_yaw_to_T(values[0], values[1], values[3], z=values[2], degrees=False)
+            T = pose_xy_yaw_to_T(
+                values[0], values[1], values[3], z=values[2], degrees=False
+            )
             return None, T
 
     if n == 3:
@@ -242,11 +258,7 @@ def load_ground_truth(filepath):
 
             try:
                 ts, T = parse_gt_row(vals)
-                rows.append({
-                    "timestamp": ts,
-                    "T": T,
-                    "raw": vals
-                })
+                rows.append({"timestamp": ts, "T": T, "raw": vals})
             except Exception:
                 continue
 
@@ -255,19 +267,22 @@ def load_ground_truth(filepath):
         sys.exit(1)
 
     n_with_ts = sum(r["timestamp"] is not None for r in rows)
-    print(f"  Loaded {len(rows)} ground truth poses from {filepath} ({n_with_ts} rows have timestamps)")
+    print(
+        f"  Loaded {len(rows)} ground truth poses from {filepath} ({n_with_ts} rows have timestamps)"
+    )
     return rows
 
 
 def nearest_gt_index(frame_ts, gt_rows):
-    gt_timestamps = np.array([
-        np.nan if r["timestamp"] is None else float(r["timestamp"])
-        for r in gt_rows
-    ])
+    gt_timestamps = np.array(
+        [np.nan if r["timestamp"] is None else float(r["timestamp"]) for r in gt_rows]
+    )
 
     valid = np.where(~np.isnan(gt_timestamps))[0]
     if len(valid) == 0:
-        raise ValueError("GT file has no timestamps; cannot do timestamp-based matching.")
+        raise ValueError(
+            "GT file has no timestamps; cannot do timestamp-based matching."
+        )
 
     best = valid[np.argmin(np.abs(gt_timestamps[valid] - frame_ts))]
     return int(best)
@@ -277,18 +292,21 @@ def nearest_gt_index(frame_ts, gt_rows):
 # 5. TRANSFORMS / ERRORS
 # ============================================================
 
+
 def transform_from_A_to_B(T_A_world, T_B_world):
     return np.linalg.inv(T_A_world) @ T_B_world
 
 
 def print_transform(T, label=""):
     t = T[:3, 3]
-    r = Rotation.from_matrix(T[:3, :3]).as_euler('xyz', degrees=True)
+    r = Rotation.from_matrix(T[:3, :3]).as_euler("xyz", degrees=True)
     dist = np.linalg.norm(t)
 
     print(f"  {label}")
     print(f"    Translation: [{t[0]:.4f}, {t[1]:.4f}, {t[2]:.4f}] (dist: {dist:.4f} m)")
-    print(f"    Rotation:    [{r[0]:.2f}, {r[1]:.2f}, {r[2]:.2f}] deg (roll, pitch, yaw)")
+    print(
+        f"    Rotation:    [{r[0]:.2f}, {r[1]:.2f}, {r[2]:.2f}] deg (roll, pitch, yaw)"
+    )
 
 
 def pose_error(T_est, T_gt):
@@ -332,8 +350,15 @@ def pose_error(T_est, T_gt):
 
 #     return pcd_down, fpfh
 
-def preprocess_for_fpfh(pcd, voxel_size=0.1, normal_radius=None, feature_radius=None,
-                        normal_max_nn=30, feature_max_nn=100):
+
+def preprocess_for_fpfh(
+    pcd,
+    voxel_size=0.1,
+    normal_radius=None,
+    feature_radius=None,
+    normal_max_nn=30,
+    feature_max_nn=100,
+):
     pcd_down = copy.deepcopy(pcd).voxel_down_sample(voxel_size)
 
     if len(pcd_down.points) == 0:
@@ -353,11 +378,12 @@ def preprocess_for_fpfh(pcd, voxel_size=0.1, normal_radius=None, feature_radius=
 
     fpfh = o3d.pipelines.registration.compute_fpfh_feature(
         pcd_down,
-        o3d.geometry.KDTreeSearchParamHybrid(radius=feature_radius, max_nn=feature_max_nn)
+        o3d.geometry.KDTreeSearchParamHybrid(
+            radius=feature_radius, max_nn=feature_max_nn
+        ),
     )
 
     return pcd_down, fpfh
-
 
 
 # def arun_svd_transform(src_pts, tgt_pts):
@@ -434,6 +460,7 @@ def preprocess_for_fpfh(pcd, voxel_size=0.1, normal_radius=None, feature_radius=
 
 #     return T, R, t
 
+
 def build_mutual_fpfh_correspondences(source_fpfh, target_fpfh):
     src_desc = np.asarray(source_fpfh.data).T
     tgt_desc = np.asarray(target_fpfh.data).T
@@ -461,14 +488,17 @@ def evaluate_inliers(src_corr_pts, tgt_corr_pts, T, distance_threshold):
     return inlier_mask, residuals
 
 
-def run_fpfh_ransac_open3d_only(source, target,
-                                voxel_size=0.1,
-                                normal_radius=None,
-                                feature_radius=None,
-                                distance_threshold=None,
-                                max_iterations=100000,
-                                sample_size=3,
-                                edge_ratio=0.9):
+def run_fpfh_ransac_open3d_only(
+    source,
+    target,
+    voxel_size=0.1,
+    normal_radius=None,
+    feature_radius=None,
+    distance_threshold=None,
+    max_iterations=100000,
+    sample_size=3,
+    edge_ratio=0.9,
+):
     """
     Open3D-only pipeline:
         Downsample -> Normals -> FPFH -> Open3D RANSAC
@@ -502,13 +532,21 @@ def run_fpfh_ransac_open3d_only(source, target,
         target_fpfh,
         mutual_filter=True,
         max_correspondence_distance=distance_threshold,
-        estimation_method=o3d.pipelines.registration.TransformationEstimationPointToPoint(False),
+        estimation_method=o3d.pipelines.registration.TransformationEstimationPointToPoint(
+            False
+        ),
         ransac_n=sample_size,
         checkers=[
-            o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(edge_ratio),
-            o3d.pipelines.registration.CorrespondenceCheckerBasedOnDistance(distance_threshold),
+            o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(
+                edge_ratio
+            ),
+            o3d.pipelines.registration.CorrespondenceCheckerBasedOnDistance(
+                distance_threshold
+            ),
         ],
-        criteria=o3d.pipelines.registration.RANSACConvergenceCriteria(max_iterations, 0.999)
+        criteria=o3d.pipelines.registration.RANSACConvergenceCriteria(
+            max_iterations, 0.999
+        ),
     )
 
     if result.fitness == 0.0 or len(result.correspondence_set) < sample_size:
@@ -533,12 +571,10 @@ def run_fpfh_ransac_open3d_only(source, target,
     }
 
 
-
-
-
 # ============================================================
 # 7. OPTIONAL PLOT: ONLY SVD RESULT
 # ============================================================
+
 
 def plot_svd_result_2d(scan1, scan2, T_est, T_gt=None, save_path=None, show=True):
     pts1 = np.asarray(scan1.points)
@@ -559,27 +595,27 @@ def plot_svd_result_2d(scan1, scan2, T_est, T_gt=None, save_path=None, show=True
         ax1, ax2 = axes
         pts2_gt = None
 
-    ax1.scatter(pts1[:, 0], pts1[:, 1], s=1, c='tab:blue', label='Target')
-    ax1.scatter(pts2[:, 0], pts2[:, 1], s=1, c='tab:orange', label='Source')
-    ax1.set_title('Before alignment')
-    ax1.set_aspect('equal')
+    ax1.scatter(pts1[:, 0], pts1[:, 1], s=1, c="tab:blue", label="Target")
+    ax1.scatter(pts2[:, 0], pts2[:, 1], s=1, c="tab:orange", label="Source")
+    ax1.set_title("Before alignment")
+    ax1.set_aspect("equal")
     ax1.grid(True, alpha=0.3)
-    ax1.legend(loc='upper left', markerscale=5)
+    ax1.legend(loc="upper left", markerscale=5)
 
-    ax2.scatter(pts1[:, 0], pts1[:, 1], s=1, c='tab:blue', label='Target')
-    ax2.scatter(pts2_est[:, 0], pts2_est[:, 1], s=1, c='tab:green', label='SVD aligned')
-    ax2.set_title('SVD alignment')
-    ax2.set_aspect('equal')
+    ax2.scatter(pts1[:, 0], pts1[:, 1], s=1, c="tab:blue", label="Target")
+    ax2.scatter(pts2_est[:, 0], pts2_est[:, 1], s=1, c="tab:green", label="SVD aligned")
+    ax2.set_title("SVD alignment")
+    ax2.set_aspect("equal")
     ax2.grid(True, alpha=0.3)
-    ax2.legend(loc='upper left', markerscale=5)
+    ax2.legend(loc="upper left", markerscale=5)
 
     if pts2_gt is not None:
-        ax3.scatter(pts1[:, 0], pts1[:, 1], s=1, c='tab:blue', label='Target')
-        ax3.scatter(pts2_gt[:, 0], pts2_gt[:, 1], s=1, c='tab:red', label='GT aligned')
-        ax3.set_title('GT alignment')
-        ax3.set_aspect('equal')
+        ax3.scatter(pts1[:, 0], pts1[:, 1], s=1, c="tab:blue", label="Target")
+        ax3.scatter(pts2_gt[:, 0], pts2_gt[:, 1], s=1, c="tab:red", label="GT aligned")
+        ax3.set_title("GT alignment")
+        ax3.set_aspect("equal")
         ax3.grid(True, alpha=0.3)
-        ax3.legend(loc='upper left', markerscale=5)
+        ax3.legend(loc="upper left", markerscale=5)
 
     plt.tight_layout()
 
@@ -598,23 +634,24 @@ def plot_svd_result_2d(scan1, scan2, T_est, T_gt=None, save_path=None, show=True
 # 8. MAIN
 # ============================================================
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="Only FPFH + RANSAC + SVD evaluation against GT odom"
     )
 
-    parser.add_argument("--scan_root", required=True,
-                        help="Root folder containing frame folders like 000000/000001/...")
+    parser.add_argument(
+        "--scan_root",
+        required=True,
+        help="Root folder containing frame folders like 000000/000001/...",
+    )
     parser.add_argument("--scan_name", default="cloud.pcd")
     parser.add_argument("--meta_name", default="data")
 
-    parser.add_argument("--idx1", type=int, required=True,
-                        help="Target frame index")
-    parser.add_argument("--idx2", type=int, required=True,
-                        help="Source frame index")
+    parser.add_argument("--idx1", type=int, required=True, help="Target frame index")
+    parser.add_argument("--idx2", type=int, required=True, help="Source frame index")
 
-    parser.add_argument("--gt_poses", required=True,
-                        help="GT odom file")
+    parser.add_argument("--gt_poses", required=True, help="GT odom file")
 
     parser.add_argument("--voxel_size", type=float, default=0.1)
     parser.add_argument("--normal_radius", type=float, default=None)
@@ -671,20 +708,26 @@ def main():
     gt_rows = load_ground_truth(args.gt_poses)
 
     if frame_ts1 is None or frame_ts2 is None:
-        print("[ERROR] Missing timestamps in frame metadata, cannot do timestamp GT matching.")
+        print(
+            "[ERROR] Missing timestamps in frame metadata, cannot do timestamp GT matching."
+        )
         sys.exit(1)
 
     gt_idx1 = nearest_gt_index(frame_ts1, gt_rows)
     gt_idx2 = nearest_gt_index(frame_ts2, gt_rows)
 
-    T1_world = gt_rows[gt_idx1]["T"]   # target pose in world
-    T2_world = gt_rows[gt_idx2]["T"]   # source pose in world
+    T1_world = gt_rows[gt_idx1]["T"]  # target pose in world
+    T2_world = gt_rows[gt_idx2]["T"]  # source pose in world
     gt_ts1 = gt_rows[gt_idx1]["timestamp"]
     gt_ts2 = gt_rows[gt_idx2]["timestamp"]
     # print(f"  Target frame -> GT row {gt_idx1}, |dt| = {abs(frame_ts1 - gt_rows[gt_idx1]['timestamp']):.9f}s")
     # print(f"  Source frame -> GT row {gt_idx2}, |dt| = {abs(frame_ts2 - gt_rows[gt_idx2]['timestamp']):.9f}s")
-    print(f"  Frame1 -> GT row {gt_idx1}, GT timestamp {gt_ts1:.12f}, |dt| = {abs(frame_ts1 - gt_ts1):.9f}s")
-    print(f"  Frame2 -> GT row {gt_idx2}, GT timestamp {gt_ts2:.12f}, |dt| = {abs(frame_ts2 - gt_ts2):.9f}s")
+    print(
+        f"  Frame1 -> GT row {gt_idx1}, GT timestamp {gt_ts1:.12f}, |dt| = {abs(frame_ts1 - gt_ts1):.9f}s"
+    )
+    print(
+        f"  Frame2 -> GT row {gt_idx2}, GT timestamp {gt_ts2:.12f}, |dt| = {abs(frame_ts2 - gt_ts2):.9f}s"
+    )
 
     print_transform(T1_world, "Target pose in world:")
     print_transform(T2_world, "Source pose in world:")
@@ -740,7 +783,11 @@ def main():
     print("\n  Estimated R:")
     print(R_est)
     print("  Estimated t:")
-    print(t_est.reshape(3,))
+    print(
+        t_est.reshape(
+            3,
+        )
+    )
 
     print("\n  GT R:")
     print(T_gt_source_to_target[:3, :3])
@@ -751,16 +798,36 @@ def main():
     # [6] Save
     # --------------------------------------------------------
     print("\n[6] Saving outputs...")
-    np.savetxt(os.path.join(args.result_dir, "estimated_transform.txt"), T_est, fmt="%.10f")
+    np.savetxt(
+        os.path.join(args.result_dir, "estimated_transform.txt"), T_est, fmt="%.10f"
+    )
     np.savetxt(os.path.join(args.result_dir, "estimated_R.txt"), R_est, fmt="%.10f")
-    np.savetxt(os.path.join(args.result_dir, "estimated_t.txt"), t_est.reshape(1, 3), fmt="%.10f")
+    np.savetxt(
+        os.path.join(args.result_dir, "estimated_t.txt"),
+        t_est.reshape(1, 3),
+        fmt="%.10f",
+    )
 
-    np.savetxt(os.path.join(args.result_dir, "gt_transform.txt"), T_gt_source_to_target, fmt="%.10f")
-    np.savetxt(os.path.join(args.result_dir, "gt_R.txt"), T_gt_source_to_target[:3, :3], fmt="%.10f")
-    np.savetxt(os.path.join(args.result_dir, "gt_t.txt"), T_gt_source_to_target[:3, 3].reshape(1, 3), fmt="%.10f")
+    np.savetxt(
+        os.path.join(args.result_dir, "gt_transform.txt"),
+        T_gt_source_to_target,
+        fmt="%.10f",
+    )
+    np.savetxt(
+        os.path.join(args.result_dir, "gt_R.txt"),
+        T_gt_source_to_target[:3, :3],
+        fmt="%.10f",
+    )
+    np.savetxt(
+        os.path.join(args.result_dir, "gt_t.txt"),
+        T_gt_source_to_target[:3, 3].reshape(1, 3),
+        fmt="%.10f",
+    )
 
     if args.save_pose:
-        np.savetxt(os.path.join(args.result_dir, args.save_pose_name), T_est, fmt="%.10f")
+        np.savetxt(
+            os.path.join(args.result_dir, args.save_pose_name), T_est, fmt="%.10f"
+        )
 
     with open(os.path.join(args.result_dir, "summary.txt"), "w", encoding="utf-8") as f:
         f.write(f"target_scan={entry1['scan_path']}\n")
@@ -786,14 +853,18 @@ def main():
     # --------------------------------------------------------
     if args.plot_svd:
         print("\n[7] Plotting only RANSAC result...")
-        save_path = os.path.join(args.result_dir, "ransac_alignment.png") if args.plot_save else None
+        save_path = (
+            os.path.join(args.result_dir, "ransac_alignment.png")
+            if args.plot_save
+            else None
+        )
         plot_svd_result_2d(
             scan1=result["target_down"],
             scan2=result["source_down"],
             T_est=T_est,
             T_gt=T_gt_source_to_target,
             save_path=save_path,
-            show=args.plot_show
+            show=args.plot_show,
         )
 
     print("\nDone.")

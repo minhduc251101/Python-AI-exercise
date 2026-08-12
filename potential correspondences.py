@@ -105,10 +105,10 @@
 # # 拼成 [src_xyz , tgt_xyz]
 # # data = np.hstack((P, Q))
 # # # 保存 CSV
-# # np.savetxt( 
-# #     "potential_correspondences.csv", 
-# #     data, 
-# #     delimiter="," 
+# # np.savetxt(
+# #     "potential_correspondences.csv",
+# #     data,
+# #     delimiter=","
 # # )
 # # print("Saved potential_correspondences.csv")
 
@@ -159,8 +159,6 @@
 # o3d.visualization.draw_geometries([pcd1, pcd2_svd])
 
 
-
-
 import numpy as np
 import open3d as o3d
 import matplotlib.pyplot as plt
@@ -177,7 +175,7 @@ voxel_size = 0.05
 # print("Working points:", len(pcd.points))
 for v in [0.05, 0.1, 0.2, 0.5]:
     down = pcd.voxel_down_sample(v)
-    print(v, len(down.points), len(down.points)/len(pts))
+    print(v, len(down.points), len(down.points) / len(pts))
 pts = np.asarray(pcd.points)
 
 # estimate normals
@@ -189,11 +187,10 @@ pcd.estimate_normals(
 # compute FPFH
 feature_radius = max(0.25, voxel_size * 5.0)
 fpfh = o3d.pipelines.registration.compute_fpfh_feature(
-    pcd,
-    o3d.geometry.KDTreeSearchParamHybrid(radius=feature_radius, max_nn=100)
+    pcd, o3d.geometry.KDTreeSearchParamHybrid(radius=feature_radius, max_nn=100)
 )
 
-F = np.asarray(fpfh.data).T   # shape: (N, D)
+F = np.asarray(fpfh.data).T  # shape: (N, D)
 print("FPFH shape:", F.shape)
 
 # descriptor saliency: distance to mean descriptor
@@ -221,15 +218,22 @@ print("Salient points:", mask.sum(), "/", len(mask))
 # color by saliency
 dist_norm = (dist - dist.min()) / (dist.max() - dist.min() + 1e-12)
 colors = np.zeros((len(dist_norm), 3))
-colors[:, 0] = dist_norm               # red = more distinctive
-colors[:, 2] = 1.0 - dist_norm         # blue = less distinctive
+colors[:, 0] = dist_norm  # red = more distinctive
+colors[:, 2] = 1.0 - dist_norm  # blue = less distinctive
 pcd.colors = o3d.utility.Vector3dVector(colors)
 
 # histogram
 plt.figure(figsize=(8, 5))
 plt.hist(nn_dist, bins=100, color="steelblue", edgecolor="black")
-plt.axvline(nn_dist.mean(), color="red", linestyle="--", label=f"mean={nn_dist.mean():.3f} m")
-plt.axvline(np.median(nn_dist), color="green", linestyle="--", label=f"median={np.median(nn_dist):.3f} m")
+plt.axvline(
+    nn_dist.mean(), color="red", linestyle="--", label=f"mean={nn_dist.mean():.3f} m"
+)
+plt.axvline(
+    np.median(nn_dist),
+    color="green",
+    linestyle="--",
+    label=f"median={np.median(nn_dist):.3f} m",
+)
 plt.xlabel("Nearest-neighbor distance (m)")
 plt.ylabel("Number of points")
 plt.title("Histogram of nearest-neighbor distances")

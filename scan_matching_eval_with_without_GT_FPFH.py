@@ -808,6 +808,7 @@ from scipy.spatial.transform import Rotation
 # 1. LOADING FUNCTIONS
 # ============================================================
 
+
 def load_pcd(filepath):
     """Load a PCD file and return an Open3D point cloud."""
     if not os.path.exists(filepath):
@@ -829,7 +830,7 @@ def parse_pose_to_T(row):
         T[:3, :3] = Rotation.from_quat(row[3:7]).as_matrix()
     elif len(row) == 6:
         T[:3, 3] = row[:3]
-        T[:3, :3] = Rotation.from_euler('xyz', row[3:6]).as_matrix()
+        T[:3, :3] = Rotation.from_euler("xyz", row[3:6]).as_matrix()
     else:
         print(f"[ERROR] Cannot parse pose with {len(row)} values. Expected 6 or 7.")
         sys.exit(1)
@@ -846,9 +847,9 @@ def load_ground_truth(filepath):
         print(f"[ERROR] Ground truth file not found: {filepath}")
         sys.exit(1)
 
-    for delim in [',', None]:
+    for delim in [",", None]:
         try:
-            data = np.loadtxt(filepath, delimiter=delim, comments='#')
+            data = np.loadtxt(filepath, delimiter=delim, comments="#")
             if data.ndim == 1:
                 data = data.reshape(1, -1)
             break
@@ -869,17 +870,17 @@ def load_ground_truth(filepath):
         elif ncols == 7:
             if row[0] > 1e9:
                 T[:3, 3] = row[1:4]
-                T[:3, :3] = Rotation.from_euler('xyz', row[4:7]).as_matrix()
+                T[:3, :3] = Rotation.from_euler("xyz", row[4:7]).as_matrix()
             else:
                 T = parse_pose_to_T(row[:7])
         elif ncols == 6:
             T = parse_pose_to_T(row[:6])
         elif ncols == 4:
             T[:3, 3] = [row[0], row[1], row[2]]
-            T[:3, :3] = Rotation.from_euler('z', row[3]).as_matrix()
+            T[:3, :3] = Rotation.from_euler("z", row[3]).as_matrix()
         elif ncols == 3:
             T[:3, 3] = [row[0], row[1], 0]
-            T[:3, :3] = Rotation.from_euler('z', row[2]).as_matrix()
+            T[:3, :3] = Rotation.from_euler("z", row[2]).as_matrix()
         else:
             print(f"[ERROR] Unexpected column count: {ncols}")
             sys.exit(1)
@@ -894,6 +895,7 @@ def load_ground_truth(filepath):
 # 2. SCAN EXTRACTION FROM MAP
 # ============================================================
 
+
 def extract_scan_from_map(pcd_map, pose_T, radius=30.0):
     """
     Extract a local scan from the full map at a given pose.
@@ -906,8 +908,10 @@ def extract_scan_from_map(pcd_map, pose_T, radius=30.0):
     mask = distances <= radius
 
     if np.sum(mask) == 0:
-        print(f"  [WARNING] No points found within {radius}m of pose {position}. "
-              f"Try increasing --scan_radius.")
+        print(
+            f"  [WARNING] No points found within {radius}m of pose {position}. "
+            f"Try increasing --scan_radius."
+        )
         return o3d.geometry.PointCloud()
 
     cropped_points = map_points[mask]
@@ -930,6 +934,7 @@ def extract_scan_from_map(pcd_map, pose_T, radius=30.0):
 # ============================================================
 # 3. OVERLAP CHECK
 # ============================================================
+
 
 def check_overlap(scan1, scan2, T_relative, search_radius=1.0):
     """
@@ -959,14 +964,18 @@ def check_overlap(scan1, scan2, T_relative, search_radius=1.0):
 # 4. SCAN MATCHING
 # ============================================================
 
+
 def run_icp_point_to_point(source, target, init_T=np.eye(4), max_dist=2.0):
     """Point-to-point ICP."""
     return o3d.pipelines.registration.registration_icp(
-        source, target, max_dist, init_T,
+        source,
+        target,
+        max_dist,
+        init_T,
         o3d.pipelines.registration.TransformationEstimationPointToPoint(),
         o3d.pipelines.registration.ICPConvergenceCriteria(
             max_iteration=500, relative_fitness=1e-6, relative_rmse=1e-6
-        )
+        ),
     )
 
 
@@ -975,16 +984,17 @@ def run_icp_point_to_plane(source, target, init_T=np.eye(4), max_dist=2.0):
     for pcd in [source, target]:
         if not pcd.has_normals():
             pcd.estimate_normals(
-                search_param=o3d.geometry.KDTreeSearchParamHybrid(
-                    radius=1.0, max_nn=30
-                )
+                search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=1.0, max_nn=30)
             )
     return o3d.pipelines.registration.registration_icp(
-        source, target, max_dist, init_T,
+        source,
+        target,
+        max_dist,
+        init_T,
         o3d.pipelines.registration.TransformationEstimationPointToPlane(),
         o3d.pipelines.registration.ICPConvergenceCriteria(
             max_iteration=500, relative_fitness=1e-6, relative_rmse=1e-6
-        )
+        ),
     )
 
 
@@ -993,16 +1003,17 @@ def run_generalized_icp(source, target, init_T=np.eye(4), max_dist=2.0):
     for pcd in [source, target]:
         if not pcd.has_normals():
             pcd.estimate_normals(
-                search_param=o3d.geometry.KDTreeSearchParamHybrid(
-                    radius=1.0, max_nn=30
-                )
+                search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=1.0, max_nn=30)
             )
     return o3d.pipelines.registration.registration_generalized_icp(
-        source, target, max_dist, init_T,
+        source,
+        target,
+        max_dist,
+        init_T,
         o3d.pipelines.registration.TransformationEstimationForGeneralizedICP(),
         o3d.pipelines.registration.ICPConvergenceCriteria(
             max_iteration=500, relative_fitness=1e-6, relative_rmse=1e-6
-        )
+        ),
     )
 
 
@@ -1015,18 +1026,12 @@ def preprocess_for_fpfh(pcd, voxel_size=0.1):
 
     if not pcd_feat.has_normals():
         pcd_feat.estimate_normals(
-            o3d.geometry.KDTreeSearchParamHybrid(
-                radius=voxel_size * 2.0,
-                max_nn=30
-            )
+            o3d.geometry.KDTreeSearchParamHybrid(radius=voxel_size * 2.0, max_nn=30)
         )
 
     fpfh = o3d.pipelines.registration.compute_fpfh_feature(
         pcd_feat,
-        o3d.geometry.KDTreeSearchParamHybrid(
-            radius=voxel_size * 5.0,
-            max_nn=100
-        )
+        o3d.geometry.KDTreeSearchParamHybrid(radius=voxel_size * 5.0, max_nn=100),
     )
 
     return pcd_feat, fpfh
@@ -1050,13 +1055,17 @@ def run_fpfh_ransac_icp(source, target, voxel_size=0.1, max_dist=2.0):
         target_fpfh,
         mutual_filter=True,
         max_correspondence_distance=distance_threshold,
-        estimation_method=o3d.pipelines.registration.TransformationEstimationPointToPoint(False),
+        estimation_method=o3d.pipelines.registration.TransformationEstimationPointToPoint(
+            False
+        ),
         ransac_n=4,
         checkers=[
             o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.9),
-            o3d.pipelines.registration.CorrespondenceCheckerBasedOnDistance(distance_threshold)
+            o3d.pipelines.registration.CorrespondenceCheckerBasedOnDistance(
+                distance_threshold
+            ),
         ],
-        criteria=o3d.pipelines.registration.RANSACConvergenceCriteria(100000, 500)
+        criteria=o3d.pipelines.registration.RANSACConvergenceCriteria(100000, 500),
     )
 
     src_icp = copy.deepcopy(source)
@@ -1065,9 +1074,7 @@ def run_fpfh_ransac_icp(source, target, voxel_size=0.1, max_dist=2.0):
     for pcd in [src_icp, tgt_icp]:
         if not pcd.has_normals():
             pcd.estimate_normals(
-                search_param=o3d.geometry.KDTreeSearchParamHybrid(
-                    radius=1.0, max_nn=30
-                )
+                search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=1.0, max_nn=30)
             )
 
     result_icp = o3d.pipelines.registration.registration_icp(
@@ -1078,7 +1085,7 @@ def run_fpfh_ransac_icp(source, target, voxel_size=0.1, max_dist=2.0):
         o3d.pipelines.registration.TransformationEstimationPointToPlane(),
         o3d.pipelines.registration.ICPConvergenceCriteria(
             max_iteration=500, relative_fitness=1e-6, relative_rmse=1e-6
-        )
+        ),
     )
 
     return result_icp, result_ransac
@@ -1087,6 +1094,7 @@ def run_fpfh_ransac_icp(source, target, voxel_size=0.1, max_dist=2.0):
 # ============================================================
 # 5. EVALUATION
 # ============================================================
+
 
 def compute_relative_pose(T1, T2):
     """T_1->2 = T1^{-1} * T2"""
@@ -1114,16 +1122,19 @@ def pose_error(T_est, T_gt):
 def print_transform(T, label=""):
     """Pretty print a 4x4 transform."""
     t = T[:3, 3]
-    r = Rotation.from_matrix(T[:3, :3]).as_euler('xyz', degrees=True)
+    r = Rotation.from_matrix(T[:3, :3]).as_euler("xyz", degrees=True)
     dist = np.linalg.norm(t)
     print(f"  {label}")
     print(f"    Translation: [{t[0]:.4f}, {t[1]:.4f}, {t[2]:.4f}] (dist: {dist:.4f} m)")
-    print(f"    Rotation:    [{r[0]:.2f}, {r[1]:.2f}, {r[2]:.2f}] deg (roll, pitch, yaw)")
+    print(
+        f"    Rotation:    [{r[0]:.2f}, {r[1]:.2f}, {r[2]:.2f}] deg (roll, pitch, yaw)"
+    )
 
 
 # ============================================================
 # 6. FPFH PLOTTING
 # ============================================================
+
 
 def plot_fpfh_bins(pcd, voxel_size=0.1, point_idx=0, prefix="scan"):
     """
@@ -1131,21 +1142,23 @@ def plot_fpfh_bins(pcd, voxel_size=0.1, point_idx=0, prefix="scan"):
     FPFH has 33 bins = 11 alpha + 11 phi + 11 theta.
     """
     pcd_feat, fpfh = preprocess_for_fpfh(pcd, voxel_size)
-    fpfh_array = np.asarray(fpfh.data)   # shape: (33, N)
+    fpfh_array = np.asarray(fpfh.data)  # shape: (33, N)
 
     if fpfh_array.shape[1] == 0:
         print(f"  [WARNING] No FPFH descriptors available for {prefix}.")
         return
 
     if point_idx < 0 or point_idx >= fpfh_array.shape[1]:
-        print(f"  [WARNING] point_idx={point_idx} out of range for {prefix}. "
-              f"Using point 0 instead.")
+        print(
+            f"  [WARNING] point_idx={point_idx} out of range for {prefix}. "
+            f"Using point 0 instead."
+        )
         point_idx = 0
 
     desc = fpfh_array[:, point_idx]
 
     alpha_bins = desc[0:11]
-    phi_bins   = desc[11:22]
+    phi_bins = desc[11:22]
     theta_bins = desc[22:33]
 
     print(f"  {prefix} FPFH shape: {fpfh_array.shape}")
@@ -1153,43 +1166,48 @@ def plot_fpfh_bins(pcd, voxel_size=0.1, point_idx=0, prefix="scan"):
 
     fig, axes = plt.subplots(1, 3, figsize=(15, 4))
 
-    axes[0].bar(range(11), alpha_bins, color='steelblue')
-    axes[0].set_title(r'$\alpha$ (normal vs connection vector)')
-    axes[0].set_xlabel('Bin')
-    axes[0].set_ylabel('Value')
+    axes[0].bar(range(11), alpha_bins, color="steelblue")
+    axes[0].set_title(r"$\alpha$ (normal vs connection vector)")
+    axes[0].set_xlabel("Bin")
+    axes[0].set_ylabel("Value")
 
-    axes[1].bar(range(11), phi_bins, color='coral')
-    axes[1].set_title(r'$\phi$ (normal vs normal)')
-    axes[1].set_xlabel('Bin')
+    axes[1].bar(range(11), phi_bins, color="coral")
+    axes[1].set_title(r"$\phi$ (normal vs normal)")
+    axes[1].set_xlabel("Bin")
 
-    axes[2].bar(range(11), theta_bins, color='seagreen')
-    axes[2].set_title(r'$\theta$ (rotation around axis)')
-    axes[2].set_xlabel('Bin')
+    axes[2].bar(range(11), theta_bins, color="seagreen")
+    axes[2].set_title(r"$\theta$ (rotation around axis)")
+    axes[2].set_xlabel("Bin")
 
     fig.suptitle(
-        f'FPFH Descriptor for {prefix}, point {point_idx} (33 bins = 11 + 11 + 11)',
-        fontsize=14, fontweight='bold'
+        f"FPFH Descriptor for {prefix}, point {point_idx} (33 bins = 11 + 11 + 11)",
+        fontsize=14,
+        fontweight="bold",
     )
     plt.tight_layout()
-    fig.savefig(f"{prefix}_fpfh_histogram_point_{point_idx}.png", dpi=150, bbox_inches='tight')
+    fig.savefig(
+        f"{prefix}_fpfh_histogram_point_{point_idx}.png", dpi=150, bbox_inches="tight"
+    )
     print(f"  Saved: {prefix}_fpfh_histogram_point_{point_idx}.png")
 
     fig2, ax = plt.subplots(figsize=(12, 4))
-    colors = ['steelblue'] * 11 + ['coral'] * 11 + ['seagreen'] * 11
+    colors = ["steelblue"] * 11 + ["coral"] * 11 + ["seagreen"] * 11
     ax.bar(range(33), desc, color=colors)
-    ax.axvline(x=10.5, color='black', linestyle='--', linewidth=0.8)
-    ax.axvline(x=21.5, color='black', linestyle='--', linewidth=0.8)
-    ax.set_xlabel('Bin Index')
-    ax.set_ylabel('Value')
-    ax.set_title(f'Full FPFH Descriptor for {prefix}, point {point_idx}')
+    ax.axvline(x=10.5, color="black", linestyle="--", linewidth=0.8)
+    ax.axvline(x=21.5, color="black", linestyle="--", linewidth=0.8)
+    ax.set_xlabel("Bin Index")
+    ax.set_ylabel("Value")
+    ax.set_title(f"Full FPFH Descriptor for {prefix}, point {point_idx}")
 
     ymax = max(desc) if np.max(desc) > 0 else 1.0
-    ax.text(5,  ymax * 0.9, r'$\alpha$', ha='center', fontsize=14)
-    ax.text(16, ymax * 0.9, r'$\phi$',   ha='center', fontsize=14)
-    ax.text(27, ymax * 0.9, r'$\theta$', ha='center', fontsize=14)
+    ax.text(5, ymax * 0.9, r"$\alpha$", ha="center", fontsize=14)
+    ax.text(16, ymax * 0.9, r"$\phi$", ha="center", fontsize=14)
+    ax.text(27, ymax * 0.9, r"$\theta$", ha="center", fontsize=14)
 
     plt.tight_layout()
-    fig2.savefig(f"{prefix}_fpfh_full_point_{point_idx}.png", dpi=150, bbox_inches='tight')
+    fig2.savefig(
+        f"{prefix}_fpfh_full_point_{point_idx}.png", dpi=150, bbox_inches="tight"
+    )
     print(f"  Saved: {prefix}_fpfh_full_point_{point_idx}.png")
 
     plt.show()
@@ -1198,6 +1216,7 @@ def plot_fpfh_bins(pcd, voxel_size=0.1, point_idx=0, prefix="scan"):
 # ============================================================
 # 7. VISUALIZATION
 # ============================================================
+
 
 def visualize_scans_3d(scan1, scan2, T_estimated, T_ground_truth):
     """
@@ -1225,7 +1244,8 @@ def visualize_scans_3d(scan1, scan2, T_estimated, T_ground_truth):
     o3d.visualization.draw_geometries(
         [s1, s2_est, s2_gt],
         window_name="Scan Matching: Red=ref, Green=estimated, Blue=ground truth",
-        width=1200, height=800
+        width=1200,
+        height=800,
     )
 
 
@@ -1248,42 +1268,54 @@ def visualize_scans_2d(scan1, scan2, T_estimated, T_ground_truth, save=False):
     pts2_gt = np.asarray(s2_gt.points)
 
     fig1, ax1 = plt.subplots(figsize=(10, 8))
-    ax1.scatter(pts1[:, 0], pts1[:, 1], s=1, c='tab:blue', label='Reference scan')
-    ax1.scatter(pts2[:, 0], pts2[:, 1], s=1, c='tab:orange', label='Current scan')
-    ax1.set_xlabel('X (m)')
-    ax1.set_ylabel('Y (m)')
-    ax1.set_title('Two Scans (before alignment)')
-    ax1.legend(loc='upper left', markerscale=5)
-    ax1.set_aspect('equal')
+    ax1.scatter(pts1[:, 0], pts1[:, 1], s=1, c="tab:blue", label="Reference scan")
+    ax1.scatter(pts2[:, 0], pts2[:, 1], s=1, c="tab:orange", label="Current scan")
+    ax1.set_xlabel("X (m)")
+    ax1.set_ylabel("Y (m)")
+    ax1.set_title("Two Scans (before alignment)")
+    ax1.legend(loc="upper left", markerscale=5)
+    ax1.set_aspect("equal")
     ax1.grid(True, alpha=0.3)
 
     fig2, ax2 = plt.subplots(figsize=(10, 8))
-    ax2.scatter(pts1[:, 0], pts1[:, 1], s=1, c='tab:blue', label='Reference scan')
-    ax2.scatter(pts2_est[:, 0], pts2_est[:, 1], s=1, c='tab:orange',
-                label='Transformed current scan (estimated)')
-    ax2.set_xlabel('X (m)')
-    ax2.set_ylabel('Y (m)')
-    ax2.set_title('Scan Matching Result (estimated alignment)')
-    ax2.legend(loc='upper left', markerscale=5)
-    ax2.set_aspect('equal')
+    ax2.scatter(pts1[:, 0], pts1[:, 1], s=1, c="tab:blue", label="Reference scan")
+    ax2.scatter(
+        pts2_est[:, 0],
+        pts2_est[:, 1],
+        s=1,
+        c="tab:orange",
+        label="Transformed current scan (estimated)",
+    )
+    ax2.set_xlabel("X (m)")
+    ax2.set_ylabel("Y (m)")
+    ax2.set_title("Scan Matching Result (estimated alignment)")
+    ax2.legend(loc="upper left", markerscale=5)
+    ax2.set_aspect("equal")
     ax2.grid(True, alpha=0.3)
 
     fig3, ax3 = plt.subplots(figsize=(10, 8))
-    ax3.scatter(pts1[:, 0], pts1[:, 1], s=1, c='tab:blue', label='Reference scan')
-    ax3.scatter(pts2_gt[:, 0], pts2_gt[:, 1], s=1, c='tab:green',
-                label='Ground truth aligned scan')
-    ax3.set_xlabel('X (m)')
-    ax3.set_ylabel('Y (m)')
-    ax3.set_title('Ground Truth Alignment')
-    ax3.legend(loc='upper left', markerscale=5)
-    ax3.set_aspect('equal')
+    ax3.scatter(pts1[:, 0], pts1[:, 1], s=1, c="tab:blue", label="Reference scan")
+    ax3.scatter(
+        pts2_gt[:, 0],
+        pts2_gt[:, 1],
+        s=1,
+        c="tab:green",
+        label="Ground truth aligned scan",
+    )
+    ax3.set_xlabel("X (m)")
+    ax3.set_ylabel("Y (m)")
+    ax3.set_title("Ground Truth Alignment")
+    ax3.legend(loc="upper left", markerscale=5)
+    ax3.set_aspect("equal")
     ax3.grid(True, alpha=0.3)
 
     if save:
-        fig1.savefig("plot_before_alignment.png", dpi=150, bbox_inches='tight')
-        fig2.savefig("plot_est_aligned.png", dpi=150, bbox_inches='tight')
-        fig3.savefig("plot_gt_aligned.png", dpi=150, bbox_inches='tight')
-        print("  Saved: plot_before_alignment.png, plot_est_aligned.png, plot_gt_aligned.png")
+        fig1.savefig("plot_before_alignment.png", dpi=150, bbox_inches="tight")
+        fig2.savefig("plot_est_aligned.png", dpi=150, bbox_inches="tight")
+        fig3.savefig("plot_gt_aligned.png", dpi=150, bbox_inches="tight")
+        print(
+            "  Saved: plot_before_alignment.png, plot_est_aligned.png, plot_gt_aligned.png"
+        )
 
     plt.show()
 
@@ -1291,6 +1323,7 @@ def visualize_scans_2d(scan1, scan2, T_estimated, T_ground_truth, save=False):
 # ============================================================
 # 8. PREPROCESSING
 # ============================================================
+
 
 def preprocess(pcd, voxel_size=0.1):
     """Downsample and remove outliers."""
@@ -1305,46 +1338,84 @@ def preprocess(pcd, voxel_size=0.1):
 # 9. MAIN
 # ============================================================
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="Extract scans from PCD map, run scan matching, compare vs ground truth"
     )
-    parser.add_argument("--map", required=True,
-                        help="Path to the full PCD map file")
-    parser.add_argument("--gt_poses", default=None,
-                        help="Ground truth poses CSV file")
-    parser.add_argument("--idx1", type=int, default=0,
-                        help="Pose index for scan 1 (default: 0)")
-    parser.add_argument("--idx2", type=int, default=10,
-                        help="Pose index for scan 2 (default: 10)")
-    parser.add_argument("--pose1", default=None,
-                        help="Manual pose 1: x,y,z,roll,pitch,yaw (degrees)")
-    parser.add_argument("--pose2", default=None,
-                        help="Manual pose 2: x,y,z,roll,pitch,yaw (degrees)")
-    parser.add_argument("--scan_radius", type=float, default=10.0,
-                        help="Radius (m) to crop scan from map (default: 10m)")
-    parser.add_argument("--voxel_size", type=float, default=0.01,
-                        help="Voxel downsampling size (default: 0.01m)")
-    parser.add_argument("--icp_max_dist", type=float, default=2.0,
-                        help="ICP max correspondence distance (default: 2.0m)")
-    parser.add_argument("--overlap_radius", type=float, default=1.0,
-                        help="Radius to check point overlap (default: 1.0m)")
-    parser.add_argument("--method", choices=["point2point", "point2plane", "gicp", "fpfh", "all"],
-                        default="all", help="Scan matching method (default: all)")
-    parser.add_argument("--plot_fpfh", action="store_true",
-                        help="Plot FPFH descriptor bins for selected scan points")
-    parser.add_argument("--fpfh_point_idx1", type=int, default=0,
-                        help="Point index for FPFH plotting in scan 1")
-    parser.add_argument("--fpfh_point_idx2", type=int, default=100,
-                        help="Point index for FPFH plotting in scan 2")
-    parser.add_argument("--no_vis", action="store_true",
-                        help="Skip visualization")
-    parser.add_argument("--save_scans", action="store_true",
-                        help="Save extracted scans as PCD files")
-    parser.add_argument("--save_plots", action="store_true",
-                        help="Save matplotlib plots as PNG files")
-    parser.add_argument("--save_pose", action="store_true",
-                        help="Save estimated relative pose to estimated_relative_pose.txt")
+    parser.add_argument("--map", required=True, help="Path to the full PCD map file")
+    parser.add_argument("--gt_poses", default=None, help="Ground truth poses CSV file")
+    parser.add_argument(
+        "--idx1", type=int, default=0, help="Pose index for scan 1 (default: 0)"
+    )
+    parser.add_argument(
+        "--idx2", type=int, default=10, help="Pose index for scan 2 (default: 10)"
+    )
+    parser.add_argument(
+        "--pose1", default=None, help="Manual pose 1: x,y,z,roll,pitch,yaw (degrees)"
+    )
+    parser.add_argument(
+        "--pose2", default=None, help="Manual pose 2: x,y,z,roll,pitch,yaw (degrees)"
+    )
+    parser.add_argument(
+        "--scan_radius",
+        type=float,
+        default=10.0,
+        help="Radius (m) to crop scan from map (default: 10m)",
+    )
+    parser.add_argument(
+        "--voxel_size",
+        type=float,
+        default=0.01,
+        help="Voxel downsampling size (default: 0.01m)",
+    )
+    parser.add_argument(
+        "--icp_max_dist",
+        type=float,
+        default=2.0,
+        help="ICP max correspondence distance (default: 2.0m)",
+    )
+    parser.add_argument(
+        "--overlap_radius",
+        type=float,
+        default=1.0,
+        help="Radius to check point overlap (default: 1.0m)",
+    )
+    parser.add_argument(
+        "--method",
+        choices=["point2point", "point2plane", "gicp", "fpfh", "all"],
+        default="all",
+        help="Scan matching method (default: all)",
+    )
+    parser.add_argument(
+        "--plot_fpfh",
+        action="store_true",
+        help="Plot FPFH descriptor bins for selected scan points",
+    )
+    parser.add_argument(
+        "--fpfh_point_idx1",
+        type=int,
+        default=0,
+        help="Point index for FPFH plotting in scan 1",
+    )
+    parser.add_argument(
+        "--fpfh_point_idx2",
+        type=int,
+        default=100,
+        help="Point index for FPFH plotting in scan 2",
+    )
+    parser.add_argument("--no_vis", action="store_true", help="Skip visualization")
+    parser.add_argument(
+        "--save_scans", action="store_true", help="Save extracted scans as PCD files"
+    )
+    parser.add_argument(
+        "--save_plots", action="store_true", help="Save matplotlib plots as PNG files"
+    )
+    parser.add_argument(
+        "--save_pose",
+        action="store_true",
+        help="Save estimated relative pose to estimated_relative_pose.txt",
+    )
 
     args = parser.parse_args()
 
@@ -1362,8 +1433,8 @@ def main():
     T_relative_gt = None
 
     if args.pose1 and args.pose2:
-        vals1 = [float(v) for v in args.pose1.split(',')]
-        vals2 = [float(v) for v in args.pose2.split(',')]
+        vals1 = [float(v) for v in args.pose1.split(",")]
+        vals2 = [float(v) for v in args.pose2.split(",")]
         vals1[3:] = np.radians(vals1[3:]).tolist()
         vals2[3:] = np.radians(vals2[3:]).tolist()
         T1 = parse_pose_to_T(np.array(vals1))
@@ -1374,14 +1445,16 @@ def main():
         has_gt = True
         gt_poses = load_ground_truth(args.gt_poses)
         if args.idx1 >= len(gt_poses) or args.idx2 >= len(gt_poses):
-            print(f"  [ERROR] Index out of range. Available: 0-{len(gt_poses)-1}")
+            print(f"  [ERROR] Index out of range. Available: 0-{len(gt_poses) - 1}")
             sys.exit(1)
         T1 = gt_poses[args.idx1]
         T2 = gt_poses[args.idx2]
         print(f"  GT pose count: {len(gt_poses)}")
         print(f"  Using poses at indices {args.idx1} and {args.idx2}")
     else:
-        print("  [ERROR] Provide either --gt_poses with --idx1/--idx2, or --pose1/--pose2")
+        print(
+            "  [ERROR] Provide either --gt_poses with --idx1/--idx2, or --pose1/--pose2"
+        )
         sys.exit(1)
 
     print_transform(T1, "Pose 1 (map frame):")
@@ -1422,17 +1495,21 @@ def main():
         pts2_map = np.asarray(scan2_map.points)
 
         fig, ax = plt.subplots(figsize=(12, 9))
-        ax.scatter(pts1_map[:, 0], pts1_map[:, 1], s=1, c='tab:blue', label='Reference scan')
-        ax.scatter(pts2_map[:, 0], pts2_map[:, 1], s=1, c='tab:orange', label='Current scan')
-        ax.set_xlabel('X (m)')
-        ax.set_ylabel('Y (m)')
-        ax.set_title('Two Scans (before scan matching)')
-        ax.legend(loc='upper left', markerscale=5)
-        ax.set_aspect('equal')
+        ax.scatter(
+            pts1_map[:, 0], pts1_map[:, 1], s=1, c="tab:blue", label="Reference scan"
+        )
+        ax.scatter(
+            pts2_map[:, 0], pts2_map[:, 1], s=1, c="tab:orange", label="Current scan"
+        )
+        ax.set_xlabel("X (m)")
+        ax.set_ylabel("Y (m)")
+        ax.set_title("Two Scans (before scan matching)")
+        ax.legend(loc="upper left", markerscale=5)
+        ax.set_aspect("equal")
         ax.grid(True, alpha=0.3)
 
         if args.save_plots:
-            fig.savefig("plot_original_scans.png", dpi=150, bbox_inches='tight')
+            fig.savefig("plot_original_scans.png", dpi=150, bbox_inches="tight")
             print("  Saved: plot_original_scans.png")
 
         plt.show()
@@ -1458,13 +1535,13 @@ def main():
             scan1_proc,
             voxel_size=args.voxel_size,
             point_idx=args.fpfh_point_idx1,
-            prefix=prefix1
+            prefix=prefix1,
         )
         plot_fpfh_bins(
             scan2_proc,
             voxel_size=args.voxel_size,
             point_idx=args.fpfh_point_idx2,
-            prefix=prefix2
+            prefix=prefix2,
         )
 
     # --- Overlap before registration ---
@@ -1472,15 +1549,13 @@ def main():
     if has_gt:
         print("  (using ground truth alignment)")
         overlap_before = check_overlap(
-            scan1_proc, scan2_proc, T_relative_gt,
-            search_radius=args.overlap_radius
+            scan1_proc, scan2_proc, T_relative_gt, search_radius=args.overlap_radius
         )
     else:
         T_init = compute_relative_pose(T1, T2)
         print("  (using pose-based alignment)")
         overlap_before = check_overlap(
-            scan1_proc, scan2_proc, T_init,
-            search_radius=args.overlap_radius
+            scan1_proc, scan2_proc, T_init, search_radius=args.overlap_radius
         )
 
     print(f"  Overlap before registration: {overlap_before:.2%}")
@@ -1494,8 +1569,8 @@ def main():
     methods = {
         "point2point": ("Point-to-Point ICP", run_icp_point_to_point),
         "point2plane": ("Point-to-Plane ICP", run_icp_point_to_plane),
-        "gicp":        ("Generalized ICP",    run_generalized_icp),
-        "fpfh":        ("FPFH + RANSAC + ICP", run_fpfh_ransac_icp),
+        "gicp": ("Generalized ICP", run_generalized_icp),
+        "fpfh": ("FPFH + RANSAC + ICP", run_fpfh_ransac_icp),
     }
 
     to_run = methods if args.method == "all" else {args.method: methods[args.method]}
@@ -1511,9 +1586,7 @@ def main():
 
         if key == "fpfh":
             result, result_ransac = func(
-                src, tgt,
-                voxel_size=args.voxel_size,
-                max_dist=args.icp_max_dist
+                src, tgt, voxel_size=args.voxel_size, max_dist=args.icp_max_dist
             )
 
             print(f"    RANSAC fitness:     {result_ransac.fitness:.4f}")
@@ -1526,8 +1599,7 @@ def main():
         T_est = result.transformation
 
         overlap_est = check_overlap(
-            scan1_proc, scan2_proc, T_est,
-            search_radius=args.overlap_radius
+            scan1_proc, scan2_proc, T_est, search_radius=args.overlap_radius
         )
 
         print(f"    Fitness:           {result.fitness:.4f}")
@@ -1572,44 +1644,51 @@ def main():
     if has_gt:
         gt_dist = np.linalg.norm(T_relative_gt[:3, 3])
         print(f"  GT relative distance:   {gt_dist:.4f}m")
-        print(f"\n  {'Method':<25} {'Trans Err(m)':<14} {'Rot Err(deg)':<14} "
-              f"{'Fitness':<10} {'RMSE':<10} {'Overlap':<10}")
+        print(
+            f"\n  {'Method':<25} {'Trans Err(m)':<14} {'Rot Err(deg)':<14} "
+            f"{'Fitness':<10} {'RMSE':<10} {'Overlap':<10}"
+        )
         print("  " + "-" * 90)
         for key, r in results.items():
             tag = " * best" if key == best_key else ""
-            print(f"  {r['name']:<25} {r['trans_error']:<14.4f} {r['rot_error']:<14.4f} "
-                  f"{r['fitness']:<10.4f} {r['rmse']:<10.4f} {r['overlap_est']:<10.4f}{tag}")
+            print(
+                f"  {r['name']:<25} {r['trans_error']:<14.4f} {r['rot_error']:<14.4f} "
+                f"{r['fitness']:<10.4f} {r['rmse']:<10.4f} {r['overlap_est']:<10.4f}{tag}"
+            )
     else:
         print(f"\n  {'Method':<25} {'Fitness':<10} {'RMSE':<10} {'Overlap':<10}")
         print("  " + "-" * 58)
         for key, r in results.items():
             tag = " * best" if key == best_key else ""
-            print(f"  {r['name']:<25} {r['fitness']:<10.4f} {r['rmse']:<10.4f} "
-                  f"{r['overlap_est']:<10.4f}{tag}")
+            print(
+                f"  {r['name']:<25} {r['fitness']:<10.4f} {r['rmse']:<10.4f} "
+                f"{r['overlap_est']:<10.4f}{tag}"
+            )
 
     print(f"\n  Best method: {results[best_key]['name']}")
-    print_transform(results[best_key]['transform'], "Estimated relative pose:")
+    print_transform(results[best_key]["transform"], "Estimated relative pose:")
 
     if has_gt:
         print_transform(T_relative_gt, "Ground truth relative pose:")
 
         overlap_est_best = check_overlap(
-            scan1_proc, scan2_proc,
-            results[best_key]['transform'],
-            search_radius=args.overlap_radius
+            scan1_proc,
+            scan2_proc,
+            results[best_key]["transform"],
+            search_radius=args.overlap_radius,
         )
         overlap_gt_best = check_overlap(
-            scan1_proc, scan2_proc,
-            T_relative_gt,
-            search_radius=args.overlap_radius
+            scan1_proc, scan2_proc, T_relative_gt, search_radius=args.overlap_radius
         )
 
         print(f"\n  Overlap after ESTIMATED alignment:    {overlap_est_best:.2%}")
         print(f"  Overlap after GROUND-TRUTH alignment: {overlap_gt_best:.2%}")
-        print(f"  Overlap difference (est - gt):        {(overlap_est_best - overlap_gt_best):.2%}")
+        print(
+            f"  Overlap difference (est - gt):        {(overlap_est_best - overlap_gt_best):.2%}"
+        )
 
     # --- Save estimated pose ---
-    best_T = results[best_key]['transform']
+    best_T = results[best_key]["transform"]
     if args.save_pose:
         np.savetxt("estimated_relative_pose.txt", best_T, fmt="%.6f")
         print(f"\n  Saved estimated pose (4x4 matrix): estimated_relative_pose.txt")
@@ -1620,14 +1699,9 @@ def main():
         print(f"\n[7] Visualization...")
         T_vis_gt = T_relative_gt if has_gt else best_T
         visualize_scans_2d(
-            scan1_proc, scan2_proc,
-            best_T, T_vis_gt,
-            save=args.save_plots
+            scan1_proc, scan2_proc, best_T, T_vis_gt, save=args.save_plots
         )
-        visualize_scans_3d(
-            scan1_proc, scan2_proc,
-            best_T, T_vis_gt
-        )
+        visualize_scans_3d(scan1_proc, scan2_proc, best_T, T_vis_gt)
 
     print("\nDone.")
 

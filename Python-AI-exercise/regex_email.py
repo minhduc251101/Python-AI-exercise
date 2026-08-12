@@ -2,14 +2,19 @@ import re
 from typing import Any
 from enum import Enum
 
+
 # 9.1) Kiểm tra địa chỉ IPv4 hợp lệ (x.x.x.x, x trong [0, 255])
 def check_ipv4(ip) -> bool:
-    pattern = r'^((25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)$'
+    pattern = (
+        r"^((25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)$"
+    )
     return re.match(pattern, ip)
 
+
 def check_ipv6(ip) -> bool:
-    pattern_ = r'^(?:[0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4}$|^::1$|^::$'
+    pattern_ = r"^(?:[0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4}$|^::1$|^::$"
     return re.fullmatch(pattern_, ip)
+
 
 class IP_TYPE(Enum):
     V4 = "v4"
@@ -22,32 +27,36 @@ def check_ip(ip: str, ip_type: IP_TYPE = IP_TYPE) -> bool:
         raise ValueError("must be define the type")
     if ip_type == IP_TYPE.V4.value:
         print("USING V4")
-        pattern = r'^((25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)$'
+        pattern = r"^((25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)$"
         if re.match(pattern, ip):
             print("This is a ipv4")
-            return True # early return
+            return True  # early return
         print("this isn't a ipv4")
         return False
     elif ip_type == IP_TYPE.V6.value:
         print("USING V6")
-        #TODO: implement define the pattern of IPv6
+        # TODO: implement define the pattern of IPv6
         return True
     print("code sai")
     return False
 
-class CHECKIP: # --> 
-    def __init__(self, ip_type: IP_TYPE): # --> 
+
+class CHECKIP:  # -->
+    def __init__(self, ip_type: IP_TYPE):  # -->
         self.ip_type = ip_type
-        self.pattern_v4 = r'^((25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)$'
-        self.pattern_v6 = r'^(?:[0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4}$|^::1$|^::$'
-    def check_ip_type_basic(self): 
+        self.pattern_v4 = r"^((25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)$"
+        self.pattern_v6 = r"^(?:[0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4}$|^::1$|^::$"
+
+    def check_ip_type_basic(self):
         return self.ip_type
-    
+
     @property
-    def check_ip_type(self): 
+    def check_ip_type(self):
         return self.ip_type
+
     # pattern = r'^((25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)$'
     # return bool(re.match(pattern, ip))
+
 
 # print("=== 9.1 IPv4 ===")
 # print(check_ipv4("192.168.1.1"))   # True
@@ -58,8 +67,9 @@ class CHECKIP: # -->
 
 # 9.2) Trích xuất tất cả email trong văn bản
 def extract_emails(text):
-    pattern = r'[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}'
+    pattern = r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}"
     return re.findall(pattern, text)
+
 
 # print("\n9.2 Extract Emails ")
 # text = "Liên hệ: admin@gmail.com, support@company.org hoặc user.name+tag@sub.domain.vn"
@@ -68,8 +78,11 @@ def extract_emails(text):
 
 # 9.3) Kiểm tra chuỗi khác rỗng, chỉ chứa a-z, A-Z, 0-9
 def check_alphanumeric(s):
-    pattern = r'^[a-zA-Z0-9]+$'
-    return bool(re.fullmatch(pattern, s)) # ky tu nhu \n xuong dong va space se duoc detect va khong tinh
+    pattern = r"^[a-zA-Z0-9]+$"
+    return bool(
+        re.fullmatch(pattern, s)
+    )  # ky tu nhu \n xuong dong va space se duoc detect va khong tinh
+
 
 # print("\n=== 9.3 Alphanumeric ===")
 # print(check_alphanumeric("Hello123"))  # True
@@ -96,8 +109,9 @@ def check_password(pwd):
     if re.search(r"[0-9]", pwd) is None:
         print("Missing Digit")
     if re.search(r"[!@#$%^&*]", pwd) is None:
-        print("Missing Special Character")    
+        print("Missing Special Character")
     return all(re.search(p, pwd) is not None for p in checks)
+
 
 # print("\n=== 9.4 Password Strength ===")
 # print(check_password("Abc@1234"))     # True
@@ -113,11 +127,11 @@ if __name__ == "__main__":
     # print('*'*40)
     # print(check_ip(input_ip, ip_type="v4")) ## true
     pwd = "12344^"
-    alphanumeric_letter = "hello" # False vi \n la dau xuong dong
-    check_pwd= check_password(pwd)
+    alphanumeric_letter = "hello"  # False vi \n la dau xuong dong
+    check_pwd = check_password(pwd)
     check_alphanumeric_letter = check_alphanumeric(alphanumeric_letter)
     # checkip = CHECKIP(ip_type=IP_TYPE.V4.value)
     # print(checkip.check_ip_type)
     print(check_pwd)
     print("\n")
-    print("check alphanumeric:",check_alphanumeric_letter)
+    print("check alphanumeric:", check_alphanumeric_letter)

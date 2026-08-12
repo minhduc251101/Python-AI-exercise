@@ -1,0 +1,16 @@
+target_scan=/Users/mbp/Desktop/learning/teaching_duc/Python-AI-exercise/dataset/004940/cloud.pcd
+source_scan=/Users/mbp/Desktop/learning/teaching_duc/Python-AI-exercise/dataset/005232/cloud.pcd
+target_gt_row=4180
+source_gt_row=4478
+yaw_only=False
+num_correspondences=779
+ransac_fitness=0.2132493841
+ransac_inlier_rmse=0.1787300666
+final_num_inliers=779
+final_inlier_ratio=1.0000000000
+final_rmse=0.1787300666
+translation_error_m=9.7986123374
+rotation_error_deg=70.8686748236
+ransac_num_inliers_eval=779
+ransac_eval_rmse=0.1787300666
+refine_mode=open3d_only
